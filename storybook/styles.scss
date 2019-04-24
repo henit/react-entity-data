@@ -1,0 +1,80 @@
+
+body {
+  font-size: 14px;
+  font-family: sans-serif;
+}
+
+code {
+  display: block;
+  background: #f4f4f4;
+  border: 1px solid #c0c0c0;
+  padding: 16px;
+  border-radius: 6px;
+  font-family: monospace, sans-serif;
+  font-size: 14px;
+}
+
+a {
+  color: #4060ff;
+  cursor: pointer;
+}
+
+button {
+  padding: 8px 16px;
+  font-family: sans-serif;
+  font-size: 14px;
+  border-radius: 6px;
+  outline: none;
+}
+
+.row {
+  display: flex;
+  flex-flow: row no-wrap;
+
+  > * {
+    margin-left: 16px;
+    margin-right: 16px;
+
+    &:first-child {
+      margin-left: 0;
+    }
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+}
+
+// Input block examples
+
+// Inner styles
+.string-input {
+  width: 400px;
+  padding: 4px 12px;
+  font-family: sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.6em;
+}
+
+// Outer styles
+.string-input {
+  border: 1px solid #cfcfcf;
+  border-radius: 4px;
+
+  &:focus {
+    border: 1px solid #808080;
+    outline: none;
+  }
+}
+
+.field {
+  margin-bottom: 8px;
+}
+
+.field__label {
+  display: block;
+  margin-top: 8px;
+  line-height: 2;
+  font-weight: bold;
+}
