@@ -9,32 +9,57 @@ export const EntityDataContext = React.createContext({
 
 export function withEntityData(Component) {
 
-  return function EntityDataComponent(props) {
-    return (
-      <EntityDataContext.Consumer>
-        { entityProps => {
-          return <Component
-            // Provide the props given to the component directly
-            {...props}
-            // But override with the entity-data specific logic
-            value={
-              // Provide the direct value if given, otherwese read from the entity data source
-              props.value || ((props.source || entityProps.source) && props.path) ?
-                _get(props.path, props.source || entityProps.source)
-                :
-                undefined
-            }
-            _entityDataOnChange={ entityProps._entityDataOnChange }
-            _entityDataOnError={ entityProps._entityDataOnError } />;
-        }
-        }
-      </EntityDataContext.Consumer>
-    );
+  const EntityDataComponent = class EntityDataComponent extends React.PureComponent {
+
+    constructor(props) {
+      super(props);
+
+      this.handleChange = this.handleChange.bind(this);
+      this.handleError = this.handleError.bind(this);
+    }
+
+    static contextType = EntityDataContext;
+    static propTypes = {
+      path: PropTypes.string,
+      value: PropTypes.any,
+      source: PropTypes.oneOfType([
+        PropTypes.object,
+        PropTypes.array
+      ]),
+      onChange: PropTypes.func,
+      onError: PropTypes.func
+    };
+
+    handleChange(...args) {
+      this.props.onChange && this.props.onChange(...args);
+      this.context.onChange && this.context.onChange(this.props.path, ...args);
+    }
+
+    handleError(...args) {
+      this.props.onError && this.props.onError(...args);
+      this.context.onError && this.context.onError(this.props.path, ...args);
+    }
+
+    render() {
+      return (
+        <Component
+          { ...this.props }
+          value={
+            // Provide the direct value if given, otherwese read from the entity data source
+            this.props.value || ((this.props.source || this.context.source) && this.props.path) ?
+              _get(this.props.path, this.props.source || this.context.source)
+              :
+              undefined
+          }
+          onChange={ this.handleChange }
+          onError={ this.handleError } />
+      );
+    }
+
   };
 
+  return EntityDataComponent;
 }
-/* eslint-enable react/prop-types */
-
 
 export default class EntityData extends React.PureComponent {
 
@@ -53,8 +78,8 @@ export default class EntityData extends React.PureComponent {
     return (
       <EntityDataContext.Provider value={{
         source: this.data,
-        _entityDataOnChange: this.props.onChange,
-        _entityDataOnError: this.props.onError
+        onChange: this.props.onChange,
+        onError: this.props.onError
       }}>
         { this.props.children }
       </EntityDataContext.Provider>

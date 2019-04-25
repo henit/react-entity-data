@@ -6,7 +6,7 @@ export { default as ReduxActions } from './redux/ReduxActions';
 export { default as ReduxReducers } from './redux/ReduxReducers';
 
 // React components
-export { default as EntityData } from './components/EntityData';
+export { default as EntityData, withEntityData } from './components/EntityData';
 export { default as EntityStringField } from './components/string/EntityStringField';
 export { default as EntityStringInput } from './components/string/EntityStringInput';
 export { default as Field } from './components/Field';
