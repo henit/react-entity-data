@@ -8,8 +8,8 @@ export const EntityDataContext = React.createContext({
 });
 
 export function withEntityData(Component) {
-
-  const EntityDataComponent = class EntityDataComponent extends React.PureComponent {
+  // const EntityDataComponent = class EntityDataComponent extends React.PureComponent {
+  class EntityDataComponent extends React.PureComponent {
 
     constructor(props) {
       super(props);
@@ -44,6 +44,7 @@ export function withEntityData(Component) {
       return (
         <Component
           { ...this.props }
+          source={ this.context.source }
           value={
             // Provide the direct value if given, otherwese read from the entity data source
             this.props.value || ((this.props.source || this.context.source) && this.props.path) ?
@@ -56,7 +57,7 @@ export function withEntityData(Component) {
       );
     }
 
-  };
+  }
 
   return EntityDataComponent;
 }
