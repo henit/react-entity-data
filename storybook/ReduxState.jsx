@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { createStore } from 'redux';
-
+// import { createStore } from 'redux';
 
 class ReduxStoreProvider extends React.Component {
 

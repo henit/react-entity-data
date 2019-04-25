@@ -1,12 +1,12 @@
 import React from 'react';
-import { createStore, combineReducers } from 'redux';
+import { createStore } from 'redux';
 import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 import { withKnobs, radios } from '@storybook/addon-knobs';
 import { withReduxStore, DebugReduxState } from '../ReduxState';
 import { EntityState, ReduxActions, ReduxReducers } from '../../src';
 import { withEntityData } from '../../src/components/EntityData';
-import { EntityData, StringInput, StringField, EntityStringInput, EntityStringField } from '../../src/components';
+import { EntityData, StringField, EntityStringField } from '../../src/components';
 
 const INITIALIZE_DATA = 'INITIALIZE_DATA';
 const LOAD_DATA = 'LOAD_DATA';

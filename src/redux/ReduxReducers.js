@@ -1,6 +1,4 @@
 import _get from 'lodash/fp/get';
-//import { EntityState, ReduxActions, ReduxReducers } from '../../src';
-// import EntityState from '../EntityState';
 import { EntityState } from 'entity-state';
 
 /**
@@ -90,9 +88,6 @@ ReduxReducers.generateAt = (statePath, types, initialState = EntityState.initial
 
       case types.clear:
         return ReduxReducers.clear(state, action, statePath);
-
-      // case types.httpRequest:
-      //   return ReduxReducers.httpRequest(state, action, statePath);
 
       default:
         return state;
