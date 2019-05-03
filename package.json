@@ -8,11 +8,14 @@
     "storybook": "start-storybook -p 4002 -c storybook",
     "compile": "babel src --out-dir lib",
     "compile:watch": "babel --watch src --out-dir lib",
-    "test": "npm run test:jest && npm run test:eslint",
+    "test": "npm run test:eslint",
     "test:eslint": "eslint . --ext js,jsx",
     "test:jest": "jest",
     "test:jest:watch": "jest --watch",
-    "clean": "rimraf lib"
+    "clean": "rimraf lib",
+    "preversion": "npm run test & npm run compile",
+    "prepublish": "npm run compile",
+    "postpublish": "npm run clean"
   },
   "repository": {
     "type": "git",
