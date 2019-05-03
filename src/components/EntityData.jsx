@@ -59,6 +59,9 @@ export function withEntityData(Component) {
 
   }
 
+  const name = Component.displayName || Component.name || 'Component';
+  EntityDataComponent.displayName = `EntityData${name}`;
+
   return EntityDataComponent;
 }
 
