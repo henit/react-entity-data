@@ -1,6 +1,4 @@
 // Data handlers
-// export { default as EntityState } from './EntityState';
-// export { default as Http } from './Http';
 export { EntityState, Http } from 'entity-state';
 export { default as ReduxActions } from './redux/ReduxActions';
 export { default as ReduxReducers } from './redux/ReduxReducers';

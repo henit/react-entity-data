@@ -37,20 +37,18 @@ ReduxReducers.httpRequest = (state, action, statePath = undefined, responsePath 
   // const data = (action.statusCode >= 200 && action.statusCode <= 299) ?
   //   responseData || undefined : existingState.data;
 
+  const existingState = (statePath ? _get(statePath, state) : state) || {};
+
   return {
     // Keep existing state metadata that is not inflicted by this request
-    ...(statePath ? _get(statePath, state) : state),
+    ...existingState,
     // Overwrite data from response only for the requeast complete dispatch
     data: action.status === 'complete' ?
       _get(`response${responsePath ? `.${responsePath}` : ''}`, action)
       :
       _get(statePath ? [statePath, 'data'] : 'data', state),
-    // ...existingState,
-    // data,
-    loadedAt: action.receivedAt,
-    //statusCode: action.statusCode,
+    loadedAt: action.receivedAt || existingState.loadedAt,
     error: action.error,
-    // connectionError: action.connectionError,
     pending: action.pending || false
 
     // METADATA FOR REQUERSTS???

@@ -12,10 +12,7 @@
     "test:eslint": "eslint . --ext js,jsx",
     "test:jest": "jest",
     "test:jest:watch": "jest --watch",
-    "clean": "rimraf lib",
-    "preversion": "npm run test & npm run compile",
-    "prepublish": "npm run compile",
-    "postpublish": "npm run clean"
+    "clean": "rimraf lib"
   },
   "repository": {
     "type": "git",
@@ -30,7 +27,7 @@
   "dependencies": {
     "bem-cn": "^3.0.1",
     "core-js": "^3.0.0",
-    "entity-state": "0.0.3",
+    "entity-state": "0.0.4",
     "lodash": "^4.17.11",
     "prop-types": "^15.7.2",
     "react": "^16.8.5",

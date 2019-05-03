@@ -8,42 +8,105 @@ import { EntityState, ReduxActions, ReduxReducers } from '../../src';
 import { withEntityData } from '../../src/components/EntityData';
 import { EntityData, StringField, EntityStringField } from '../../src/components';
 
-const INITIALIZE_DATA = 'INITIALIZE_DATA';
-const LOAD_DATA = 'LOAD_DATA';
-const SET_DATA = 'SET_DATA';
-const STAGE_DATA = 'STAGE_DATA';
-const DATA_ERROR = 'DATA_ERROR';
-const DATA_PATH_ERROR = 'DATA_PATH_ERROR';
-const CLEAR_DATA = 'CLEAR_DATA';
+// Single entity state
+const ENTITY_INITIALIZE_DATA = 'ENTITY_INITIALIZE_DATA';
+const ENTITY_LOAD_DATA = 'ENTITY_LOAD_DATA';
+const ENTITY_SET_DATA = 'ENTITY_SET_DATA';
+const ENTITY_STAGE_DATA = 'ENTITY_STAGE_DATA';
+const ENTITY_DATA_ERROR = 'ENTITY_DATA_ERROR';
+const ENTITY_DATA_PATH_ERROR = 'ENTITY_DATA_PATH_ERROR';
+const ENTITY_CLEAR_DATA = 'ENTITY_CLEAR_DATA';
 
+let entityActions = ReduxActions.all({
+  initialize: ENTITY_INITIALIZE_DATA,
+  load: ENTITY_LOAD_DATA,
+  set: ENTITY_SET_DATA,
+  stage: ENTITY_STAGE_DATA,
+  error: ENTITY_DATA_ERROR,
+  pathError: ENTITY_DATA_PATH_ERROR,
+  clear: ENTITY_CLEAR_DATA
+});
 
-const initialState = EntityState.load({
+const entityInitialState = EntityState.load({
   name: 'First Last',
   email: 'm@il.com',
   complain: 'Keep away!',
   number: 42
 });
 
-const reducer = ReduxReducers.generate({
-  initialize: INITIALIZE_DATA,
-  load: LOAD_DATA,
-  set: SET_DATA,
-  stage: STAGE_DATA,
-  error: DATA_ERROR,
-  pathError: DATA_PATH_ERROR,
-  clear: CLEAR_DATA
-}, initialState);
-const store = createStore(reducer);
+const entityReducer = ReduxReducers.generate({
+  initialize: ENTITY_INITIALIZE_DATA,
+  load: ENTITY_LOAD_DATA,
+  set: ENTITY_SET_DATA,
+  stage: ENTITY_STAGE_DATA,
+  error: ENTITY_DATA_ERROR,
+  pathError: ENTITY_DATA_PATH_ERROR,
+  clear: ENTITY_CLEAR_DATA
+}, entityInitialState);
+const entityStore = createStore(entityReducer);
 
-let actions = ReduxActions.all({
-  initialize: INITIALIZE_DATA,
-  load: LOAD_DATA,
-  set: SET_DATA,
-  stage: STAGE_DATA,
-  error: DATA_ERROR,
-  pathError: DATA_PATH_ERROR,
-  clear: CLEAR_DATA
+const entityOnChange = (path, value, data) => {
+  // Update the store
+  entityStore.dispatch(
+    getOnChangeAction() === 'stage' ?
+      entityActions.stage(path, value)
+      :
+      entityActions.set(path, value)
+  );
+
+  // Alert the storybook log
+  action('entity onChange')(path, value, data);
+};
+
+const entityOnElementChange = action('entity onElementChange');
+
+const entityOnError = (path, err) => entityStore.dispatch(entityActions.pathError(path, err));
+
+// Entity list state
+const LIST_INITIALIZE_DATA = 'LIST_INITIALIZE_DATA';
+const LIST_LOAD_DATA = 'LIST_LOAD_DATA';
+const LIST_SET_DATA = 'LIST_SET_DATA';
+const LIST_STAGE_DATA = 'LIST_STAGE_DATA';
+const LIST_DATA_ERROR = 'LIST_DATA_ERROR';
+const LIST_DATA_PATH_ERROR = 'LIST_DATA_PATH_ERROR';
+const LIST_CLEAR_DATA = 'LIST_CLEAR_DATA';
+
+let listActions = ReduxActions.all({
+  initialize: LIST_INITIALIZE_DATA,
+  load: LIST_LOAD_DATA,
+  set: LIST_SET_DATA,
+  stage: LIST_STAGE_DATA,
+  error: LIST_DATA_ERROR,
+  pathError: LIST_DATA_PATH_ERROR,
+  clear: LIST_CLEAR_DATA
 });
+
+const listInitialState = EntityState.load([
+  {
+    name: 'Entity one',
+    number: 42
+  },
+  {
+    name: 'Entity two',
+    number: 43
+  },
+  {
+    name: 'Entity three',
+    number: 44
+  }
+]);
+
+const listReducer = ReduxReducers.generate({
+  initialize: LIST_INITIALIZE_DATA,
+  load: LIST_LOAD_DATA,
+  set: LIST_SET_DATA,
+  stage: LIST_STAGE_DATA,
+  error: LIST_DATA_ERROR,
+  pathError: LIST_DATA_PATH_ERROR,
+  clear: LIST_CLEAR_DATA
+}, listInitialState);
+const listStore = createStore(listReducer);
+
 
 const ComplainingEntityStringField = withEntityData((props) => {
   return (
@@ -59,49 +122,53 @@ const getOnChangeAction = () => radios('On change handler', {
   'Stage changes for update later': 'stage'
 }, 'set');
 
-
-const onChange = (path, value) => {
+const listOnChange = (path, value, data) => {
+  console.info('HMM', path, value, data);
   // Update the store
-  store.dispatch(
+  listStore.dispatch(
     getOnChangeAction() === 'stage' ?
-      actions.stage(path, value)
+      listActions.stage(path, value)
       :
-      actions.set(path, value)
+      listActions.set(path, value)
   );
 
   // Alert the storybook log
-  action('onChange')(path, value);
+  action('list onChange')(path, value, data);
 };
 
-const onError = (path, err) => store.dispatch(actions.pathError(path, err));
+const listOnElementChange = action('list onElementChange');
+
+const listOnError = (path, err) => listStore.dispatch(listActions.pathError(path, err));
 
 
 storiesOf('EntityData', module)
   .addDecorator(withKnobs)
-  .add('With full state', withReduxStore(store, (state, dispatch) => {
+  .add('With full state', withReduxStore(entityStore, (state, dispatch) => {
 
     return (
       <div>
         <h1>EntityData</h1>
 
-        <h2>
+        <h2>Single entity</h2>
+
+        <h3>
           ... with full state (onChange handlers
           { getOnChangeAction() === 'stage' ? ' staging the changes' : ' setting the changes' })
-        </h2>
+        </h3>
 
         <EntityData
           state={ state }
-          onChange={ onChange }
-          onError={ onError }
+          onChange={ entityOnChange }
+          onError={ entityOnError }
         >
           <EntityStringField label="Name" path="name" />
 
-          <a onClick={ () => dispatch(actions.pathError('name', new Error('Something wrong with the name..'))) }>
+          <a onClick={ () => dispatch(entityActions.pathError('name', new Error('Something wrong with the name..'))) }>
             Trigger error
           </a>
 
           <EntityStringField label="E-mail" path="email" />
-          <a onClick={ () => dispatch(actions.pathError('email', new Error('Something wrong with the e-mail..'))) }>
+          <a onClick={ () => dispatch(entityActions.pathError('email', new Error('Something wrong with the e-mail..'))) }>
             Trigger error
           </a>
 
@@ -109,22 +176,85 @@ storiesOf('EntityData', module)
         </EntityData>
 
         <DebugReduxState state={ state } />
-        <a onClick={ () => dispatch(actions.initialize()) }>
+        <a onClick={ () => dispatch(entityActions.initialize()) }>
           Initialize
         </a>
         {' | '}
-        <a onClick={ () => dispatch(actions.clear()) }>
+        <a onClick={ () => dispatch(entityActions.clear()) }>
           Clear state
         </a>
         {' | '}
-        <a onClick={ () => dispatch(actions.error(new Error('An error concerning the whole data set.'))) }>
+        <a onClick={ () => dispatch(entityActions.error(new Error('An error concerning the whole data set.'))) }>
           Error
         </a>
       </div>
     );
-  }
-  ))
-  .add('With data only', withReduxStore(reducer, (state, dispatch) =>
+  }))
+  .add('Nested entity data', withReduxStore(listStore, (state, dispatch) => {
+
+    return (
+      <div>
+        <h1>EntityData</h1>
+
+        <h2>Nested entities</h2>
+
+        <h3>
+          ... with full state (onChange handlers
+          { getOnChangeAction() === 'stage' ? ' staging the changes' : ' setting the changes' })
+        </h3>
+
+        <EntityData
+          state={ state }
+          onChange={ listOnChange }
+          onError={ listOnError }
+        >
+          { state.data && state.data.map((element, index) =>
+            <EntityData path={ index.toString() } key={ index } onChange={ listOnElementChange }>
+              <EntityStringField label="Name" path="name" />
+              <EntityStringField label="Number" path="number" />
+              <hr />
+            </EntityData>
+          )}
+
+
+          <hr />
+        </EntityData>
+
+        <DebugReduxState state={ state } />
+      </div>
+    );
+  }))
+  .add('Iterate array data', withReduxStore(listStore, (state, dispatch) => {
+
+    return (
+      <div>
+        <h1>EntityData</h1>
+
+        <h2>Iterate entity array</h2>
+
+        <h3>
+          ... with full state (onChange handlers
+          { getOnChangeAction() === 'stage' ? ' staging the changes' : ' setting the changes' })
+        </h3>
+
+        <EntityData
+          state={ state }
+          onChange={ listOnChange }
+          onElementChange={ listOnElementChange }
+          onError={ listOnError }
+          iterate
+        >
+          <EntityStringField label="Name" path="name" />
+          <EntityStringField label="Number" path="number" />
+
+          <hr />
+        </EntityData>
+
+        <DebugReduxState state={ state } />
+      </div>
+    );
+  }))
+  .add('With data only', withReduxStore(entityReducer, (state, dispatch) =>
     <div>
       <h1>EntityData</h1>
 
@@ -135,9 +265,9 @@ storiesOf('EntityData', module)
       <EntityData
         data={ state.data }
         onChange={
-          (path, value) => {
-            dispatch(actions.set(path, value));
-            action('onChange')(path, value);
+          (path, value, data) => {
+            dispatch(entityActions.set(path, value));
+            action('onChange')(path, value, data);
           }
         }
       >
@@ -153,9 +283,9 @@ storiesOf('EntityData', module)
       <EntityData
         data={ state.data }
         onChange={
-          (path, value) => {
-            dispatch(actions.stage(path, value));
-            action('onChange')(path, value);
+          (path, value, data) => {
+            dispatch(entityActions.stage(path, value));
+            action('onChange')(path, value, data);
           }
         }
       >
