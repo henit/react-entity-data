@@ -1,5 +1,4 @@
 import _partial from 'lodash/fp/partial';
-// import Http from '../Http';
 import { Http } from 'entity-state';
 
 /**
@@ -7,16 +6,70 @@ import { Http } from 'entity-state';
  */
 let ReduxActions = {};
 
+/**
+ * Initialize entity state
+ * @param {string} type Action type constant
+ * @return {object} Action
+ */
 ReduxActions.initialize = type => () => ({ type });
+
+/**
+ * Load data into entity state
+ * @param {string} type Action type constant
+ * @return {object} Action
+ */
 ReduxActions.load = type => data => ({ type, data });
+
+/**
+ * Set new value in entity state data
+ * @param {string} type Action type constant
+ * @return {object} Action
+ */
 ReduxActions.set = type => (path, value) => ({ type, path, value });
+
+/**
+ * Stage a data change in pathChanges (while leaving the original data unchanged)
+ * @param {string} type Action type constant
+ * @return {object} Action
+ */
 ReduxActions.stage = type => (path, value) => ({ type, path, value });
+
+/**
+ * Set an error (for the whole data set) into the entity state
+ * @param {string} type Action type constant
+ * @return {object} Action
+ */
 ReduxActions.error = type => error => ({ type, error });
+
+/**
+ * Set a path-specific error into the entity state
+ * @param {string} type Action type constant
+ * @return {object} Action
+ */
 ReduxActions.pathError = type => (path, error) => ({ type, path, error });
+
+/**
+ * Clear the entity state
+ * @param {string} type Action type constant
+ * @return {object} Action
+ */
 ReduxActions.clear = type => () => ({ type });
+
+/**
+ * Clean the entity state (removing pathChange, errors etc but keeping the data)
+ * @param {string} type Action type constant
+ * @return {object} Action
+ */
+ReduxActions.clean = type => () => ({ type });
 
 // Main request method
 
+/**
+ * Run http-request for an entity state, dispatching actions for the state of the request
+ * @param {string} type Action type constant
+ * @param {function} requestFn Async function making the actual http request
+ * @return {function} Thunk action
+ */
 ReduxActions.httpRequest = (type, requestFn) => {
 
   const typeInitiate = (Array.isArray(type) && type[0]) || type;
@@ -67,114 +120,52 @@ ReduxActions.httpRequest = (type, requestFn) => {
   };
 };
 
-ReduxActions.httpRequest0 = (type, requestFn, options = {}) => {
-  const {
-    method = 'GET',
-    path = '',
-    query = {},
-    body,
-    params // Action parameters (additional to the request info)
-  } = options;
 
-  const typeInitiate = (Array.isArray(type) && type[0]) || type;
-  const typeComplete = (Array.isArray(type) && type[1]) || type;
-  const typeError = (Array.isArray(type) && type[2]) || type;
+// ReduxActions.httpGet = (type, requestFn, path, query, options = {}) =>
+//   ReduxActions.httpRequest(type, requestFn, {
+//     ...options,
+//     method: 'GET',
+//     path,
+//     query
+//   });
 
-  return async dispatch => {
-    dispatch({
-      type: typeInitiate,
-      status: 'initiate',
-      pending: true,
-      request: { method, path, query, body },
-      params
-    });
+// ReduxActions.httpPost = (type, requestFn, path, body, options = {}) =>
+//   ReduxActions.httpRequest(type, requestFn, {
+//     ...options,
+//     method: 'POST',
+//     path,
+//     body
+//   });
 
-    try {
-      // const { statusCode, response } = await Http.request(options);
-      const { statusCode, response } = await requestFn(options);
+// ReduxActions.httpPut = (type, requestFn, path, body, options = {}) =>
+//   ReduxActions.httpRequest(type, requestFn, {
+//     ...options,
+//     method: 'PUT',
+//     path,
+//     body
+//   });
 
-      dispatch({
-        type: typeComplete,
-        status: 'complete',
-        pending: false,
-        receivedAt: (new Date()).toISOString(),
-        statusCode,
-        error: null,
-        response,
-        params
-      });
+// ReduxActions.httpPatch = (type, requestFn, path, body, options = {}) =>
+//   ReduxActions.httpRequest(type, requestFn, {
+//     ...options,
+//     method: 'PATCH',
+//     path,
+//     body
+//   });
 
-      return {
-        statusCode,
-        response,
-        error: null
-      };
+// ReduxActions.httpDelete = (type, requestFn, path, query, options = {}) =>
+//   ReduxActions.httpRequest(type, requestFn, {
+//     ...options,
+//     method: 'DELETE',
+//     path,
+//     query
+//   });
 
-    } catch (e) {
-      dispatch({
-        type: typeError,
-        status: 'error',
-        pending: false,
-        statusCode: e.statusCode,
-        error: {
-          message: e.message,
-          details: e.details,
-          stack: e.stack,
-          connectionError: e.connectionError
-        },
-        params
-      });
-    }
-  };
-};
-
-// ReduxActions.httpRequest
-
-// actions.get = (type, path, query, options = {}) =>
-ReduxActions.httpGet = (type, requestFn, path, query, options = {}) =>
-  ReduxActions.httpRequest(type, requestFn, {
-    ...options,
-    method: 'GET',
-    path,
-    query
-  });
-
-// actions.post = (type, path, body, options = {}) =>
-ReduxActions.httpPost = (type, requestFn, path, body, options = {}) =>
-  ReduxActions.httpRequest(type, requestFn, {
-    ...options,
-    method: 'POST',
-    path,
-    body
-  });
-
-// actions.put = (type, path, body, options = {}) =>
-ReduxActions.httpPut = (type, requestFn, path, body, options = {}) =>
-  ReduxActions.httpRequest(type, requestFn, {
-    ...options,
-    method: 'PUT',
-    path,
-    body
-  });
-
-// actions.patch = (type, path, body, options = {}) =>
-ReduxActions.httpPatch = (type, requestFn, path, body, options = {}) =>
-  ReduxActions.httpRequest(type, requestFn, {
-    ...options,
-    method: 'PATCH',
-    path,
-    body
-  });
-
-// actions.delete = (type, path, query, options = {}) =>
-ReduxActions.httpDelete = (type, requestFn, path, query, options = {}) =>
-  ReduxActions.httpRequest(type, requestFn, {
-    ...options,
-    method: 'DELETE',
-    path,
-    query
-  });
-
+/**
+ * Compose http request functions with the given options merged with the argument options
+ * @param {object} [options] Options to apply to request calls
+ * @return {object} Function literal
+ */
 ReduxActions.withOptions = (options = {}) => ({
   request: (callOptions = {}) => Http.request({ ...options, ...callOptions }),
   get: (path, query, callOptions = {}) => Http.get(path, query, { ...options, ...callOptions }),
@@ -185,7 +176,11 @@ ReduxActions.withOptions = (options = {}) => ({
 });
 
 
-
+/**
+ * Generate action creators for the given types
+ * @param {object} types Types (i.e { load: LOAD_USER })
+ * @return {object} Function lietarl
+ */
 ReduxActions.all = types => ({
   initialize: types.initialize ? ReduxActions.initialize(types.initialize) : undefined,
   load: types.load ? ReduxActions.load(types.load) : undefined,
@@ -195,15 +190,7 @@ ReduxActions.all = types => ({
   pathError: types.pathError ? ReduxActions.pathError(types.pathError) : undefined,
   clear: types.clear ? ReduxActions.clear(types.clear) : undefined,
 
-  // Remove?
-  // httpRequest: types.httpRequest ? ReduxActions.httpRequest(types.httpRequest) : undefined,
-  httpRequest: types.httpRequest ? _partial(ReduxActions.httpRequest, [types.httpRequest]) : undefined,
-
-  httpGet: types.httpGet ? ReduxActions.httpGet(types.httpGet) : undefined,
-  httpPost: types.httpPost ? ReduxActions.httpPost(types.httpPost) : undefined,
-  httpPut: types.httpPut ? ReduxActions.httpPut(types.httpPut) : undefined,
-  httpPatch: types.httpPatch ? ReduxActions.httpPatch(types.httpPatch) : undefined,
-  httpDelete: types.httpDelete ? ReduxActions.httpDelete(types.httpDelete) : undefined
+  httpRequest: types.httpRequest ? _partial(ReduxActions.httpRequest, [types.httpRequest]) : undefined
 });
 
 export default ReduxActions;

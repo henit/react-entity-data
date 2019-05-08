@@ -8,58 +8,69 @@ export const EntityDataContext = React.createContext({
   error: {}
 });
 
-export function withEntityData(Component) {
-  // const EntityDataComponent = class EntityDataComponent extends React.PureComponent {
-  class EntityDataComponent extends React.PureComponent {
+/*
+ * Higher-order component for a component that is using entity data
+ */
+class EntityDataComponent extends React.PureComponent {
 
-    constructor(props) {
-      super(props);
+  static contextType = EntityDataContext;
 
-      this.handleChange = this.handleChange.bind(this);
-      this.handleError = this.handleError.bind(this);
-    }
+  static propTypes = {
+    component: PropTypes.elementType,
+    path: PropTypes.string,
+    value: PropTypes.any,
+    data: PropTypes.oneOfType([
+      PropTypes.object,
+      PropTypes.array
+    ]),
+    onChange: PropTypes.func,
+    onError: PropTypes.func
+  };
 
-    static contextType = EntityDataContext;
+  // Event handlers. Trigger direct event props on the component,
+  // and EntityData event props with the input path
 
-    static propTypes = {
-      path: PropTypes.string,
-      value: PropTypes.any,
-      data: PropTypes.oneOfType([
-        PropTypes.object,
-        PropTypes.array
-      ]),
-      onChange: PropTypes.func,
-      onError: PropTypes.func
-    };
+  handleChange = (value) => {
+    this.props.onChange && this.props.onChange(value);
+    this.context.onChange && this.context.onChange(this.props.path, value, this.context.data);
+  };
 
-    handleChange(value) {
-      this.props.onChange && this.props.onChange(value);
-      this.context.onChange && this.context.onChange(this.props.path, value, this.context.data);
-    }
+  handleError = (error) => {
+    this.props.onError && this.props.onError(error);
+    this.context.onError && this.context.onError(this.props.path, error, this.context.data);
+  };
 
-    handleError(error) {
-      this.props.onError && this.props.onError(error);
-      this.context.onError && this.context.onError(this.props.path, error, this.context.data);
-    }
+  render() {
+    // Provide the direct value if given, otherwese read from the entity data source
+    const Component = this.props.component;
+    const path = this.props.path;
+    const data = this.props.data || this.context.data;
+    const value = this.props.value || (data && path) ? _get(path, data) : undefined;
 
-    render() {
-      // Provide the direct value if given, otherwese read from the entity data source
-      const path = this.props.path;
-      const data = this.props.data || this.context.data;
-      const value = this.props.value || (data && path) ? _get(path, data) : undefined;
-
-      return (
-        <Component
-          { ...this.props }
-          value={ value }
-          onChange={ this.handleChange }
-          onError={ this.handleError } />
-      );
-    }
-
+    return (
+      <Component
+        { ...this.props }
+        value={ value }
+        onChange={ this.handleChange }
+        onError={ this.handleError } />
+    );
   }
 
-  return EntityDataComponent;
+}
+
+/**
+ * Connect a component with EntityData
+ * @param {object} Component React component
+ * @return {function} Render component
+ */
+export function withEntityData(Component) {
+  return function EntityDataComponentRenderer(props) {
+    return (
+      <EntityDataComponent
+        { ...props }
+        component={ Component } />
+    );
+  };
 }
 
 
@@ -87,7 +98,6 @@ export default class EntityData extends React.PureComponent {
 
     path: PropTypes.string,
     iterate: PropTypes.bool
-
   };
 
   handleChange = (path, value, data) => {
