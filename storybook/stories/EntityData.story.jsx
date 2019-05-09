@@ -58,7 +58,7 @@ const entityOnChange = (path, value, data) => {
   action('entity onChange')(path, value, data);
 };
 
-const entityOnElementChange = action('entity onElementChange');
+// const entityOnElementChange = action('entity onElementChange');
 
 const entityOnError = (path, err) => entityStore.dispatch(entityActions.pathError(path, err));
 
@@ -123,7 +123,6 @@ const getOnChangeAction = () => radios('On change handler', {
 }, 'set');
 
 const listOnChange = (path, value, data) => {
-  console.info('HMM', path, value, data);
   // Update the store
   listStore.dispatch(
     getOnChangeAction() === 'stage' ?

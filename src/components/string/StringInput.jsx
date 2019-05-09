@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import bemCn from 'bem-cn';
+import { withEntityData } from '../EntityData';
 
 const block = bemCn('string-input');
 
@@ -130,3 +131,5 @@ StringInput.defaultProps = {
   maxHeight: 400,
   autoFocus: false
 };
+
+export const EntityStringInput = withEntityData(StringInput);

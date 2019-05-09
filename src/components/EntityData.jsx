@@ -8,69 +8,62 @@ export const EntityDataContext = React.createContext({
   error: {}
 });
 
-/*
- * Higher-order component for a component that is using entity data
- */
-class EntityDataComponent extends React.PureComponent {
-
-  static contextType = EntityDataContext;
-
-  static propTypes = {
-    component: PropTypes.elementType,
-    path: PropTypes.string,
-    value: PropTypes.any,
-    data: PropTypes.oneOfType([
-      PropTypes.object,
-      PropTypes.array
-    ]),
-    onChange: PropTypes.func,
-    onError: PropTypes.func
-  };
-
-  // Event handlers. Trigger direct event props on the component,
-  // and EntityData event props with the input path
-
-  handleChange = (value) => {
-    this.props.onChange && this.props.onChange(value);
-    this.context.onChange && this.context.onChange(this.props.path, value, this.context.data);
-  };
-
-  handleError = (error) => {
-    this.props.onError && this.props.onError(error);
-    this.context.onError && this.context.onError(this.props.path, error, this.context.data);
-  };
-
-  render() {
-    // Provide the direct value if given, otherwese read from the entity data source
-    const Component = this.props.component;
-    const path = this.props.path;
-    const data = this.props.data || this.context.data;
-    const value = this.props.value || (data && path) ? _get(path, data) : undefined;
-
-    return (
-      <Component
-        { ...this.props }
-        value={ value }
-        onChange={ this.handleChange }
-        onError={ this.handleError } />
-    );
-  }
-
-}
-
 /**
  * Connect a component with EntityData
  * @param {object} Component React component
  * @return {function} Render component
  */
 export function withEntityData(Component) {
-  return function EntityDataComponentRenderer(props) {
-    return (
-      <EntityDataComponent
-        { ...props }
-        component={ Component } />
-    );
-  };
+
+  /*
+   * Higher-order component for a component that is using entity data
+   */
+  class EntityDataComponent extends React.PureComponent {
+
+    static contextType = EntityDataContext;
+
+    static propTypes = {
+      path: PropTypes.string,
+      value: PropTypes.any,
+      data: PropTypes.oneOfType([
+        PropTypes.object,
+        PropTypes.array
+      ]),
+      onChange: PropTypes.func,
+      onError: PropTypes.func
+    };
+
+    // Event handlers. Trigger direct event props on the component,
+    // and EntityData event props with the input path
+
+    handleChange = (value) => {
+      this.props.onChange && this.props.onChange(value);
+      this.context.onChange && this.context.onChange(this.props.path, value, this.context.data);
+    };
+
+    handleError = (error) => {
+      this.props.onError && this.props.onError(error);
+      this.context.onError && this.context.onError(this.props.path, error, this.context.data);
+    };
+
+    render() {
+      // Provide the direct value if given, otherwese read from the entity data source
+      const path = this.props.path;
+      const data = this.props.data || this.context.data;
+      const value = this.props.value || (data && path) ? _get(path, data) : undefined;
+
+      return (
+        <Component
+          { ...this.props }
+          value={ value }
+          onChange={ this.handleChange }
+          onError={ this.handleError } />
+      );
+    }
+
+  }
+
+  return EntityDataComponent;
 }
 
 

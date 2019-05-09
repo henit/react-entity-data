@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-// import { withEntityData } from '../data/EntityData';
+import { withEntityData } from '../EntityData';
 import Field from '../Field';
 import StringInput from './StringInput';
 
@@ -17,4 +17,4 @@ StringField.propTypes = {
   error: PropTypes.object
 };
 
-// export default withEntityData(StringField);
+export const EntityStringField = withEntityData(StringField);
