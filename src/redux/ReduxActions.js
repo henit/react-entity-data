@@ -1,4 +1,6 @@
+import _get from 'lodash/fp/get';
 import _partial from 'lodash/fp/partial';
+import _defaultTo from 'lodash/fp/defaultTo';
 import { Http } from 'entity-state';
 
 /**
@@ -68,39 +70,59 @@ ReduxActions.clean = type => () => ({ type });
  * Run http-request for an entity state, dispatching actions for the state of the request
  * @param {string} type Action type constant
  * @param {function} requestFn Async function making the actual http request
+ * @param {object} [options] Options
+ * @param {string} [option.operation] CRUD operation type. "create", "read", "update" or "delete"
+ * @param {bool} [options.load] Load the request response into data when completed (default: true)
+ * @param {bool} [options.clean] Clean state when state completes (default: true)
+ * @param {number} [options.delayCleanInitial] Time (ms or true for default) before cleaning initial values from state
+ * @param {string} [options.responsePath] Path into the response that contains the data for the state (if not at root)
  * @return {function} Thunk action
  */
-ReduxActions.httpRequest = (type, requestFn) => {
-
+ReduxActions.httpRequest = (type, requestFn, options = {}) => {
   const typeInitiate = (Array.isArray(type) && type[0]) || type;
   const typeComplete = (Array.isArray(type) && type[1]) || type;
   const typeError = (Array.isArray(type) && type[2]) || type;
+  const typeClean = (Array.isArray(type) && type[3]) || type;
 
   return (...args) => async dispatch => {
     dispatch({
       type: typeInitiate,
+      operation: options.operation,
       status: 'initiate',
       pending: true
     });
 
     try {
-      // const { statusCode, response } = await Http.request(options);
       const { statusCode, response } = await requestFn(...args);
 
+      //setTimeout(() => {
       dispatch({
         type: typeComplete,
         status: 'complete',
         pending: false,
         receivedAt: (new Date()).toISOString(),
-        statusCode,
-        error: null,
-        response
+        clean: _defaultTo(true, options.clean),
+        delayCleanInitial: Boolean(options.delayCleanInitial),
+        load: _defaultTo(true, options.load),
+        data: options.responsePath ? _get(options.responsePath, response) : response
       });
+      //}, 2000);
+
+      if (options.delayCleanInitial) {
+        setTimeout(() => {
+
+          dispatch({
+            type: typeClean,
+            status: 'clean',
+            clean: true
+          });
+
+        }, (typeof options.delayCleanInitial) !== 'number' ? 3000 : options.delayCleanInitial);
+      }
 
       return {
         statusCode,
-        response,
-        error: null
+        response
       };
 
     } catch (e) {
@@ -119,47 +141,6 @@ ReduxActions.httpRequest = (type, requestFn) => {
     }
   };
 };
-
-
-// ReduxActions.httpGet = (type, requestFn, path, query, options = {}) =>
-//   ReduxActions.httpRequest(type, requestFn, {
-//     ...options,
-//     method: 'GET',
-//     path,
-//     query
-//   });
-
-// ReduxActions.httpPost = (type, requestFn, path, body, options = {}) =>
-//   ReduxActions.httpRequest(type, requestFn, {
-//     ...options,
-//     method: 'POST',
-//     path,
-//     body
-//   });
-
-// ReduxActions.httpPut = (type, requestFn, path, body, options = {}) =>
-//   ReduxActions.httpRequest(type, requestFn, {
-//     ...options,
-//     method: 'PUT',
-//     path,
-//     body
-//   });
-
-// ReduxActions.httpPatch = (type, requestFn, path, body, options = {}) =>
-//   ReduxActions.httpRequest(type, requestFn, {
-//     ...options,
-//     method: 'PATCH',
-//     path,
-//     body
-//   });
-
-// ReduxActions.httpDelete = (type, requestFn, path, query, options = {}) =>
-//   ReduxActions.httpRequest(type, requestFn, {
-//     ...options,
-//     method: 'DELETE',
-//     path,
-//     query
-//   });
 
 /**
  * Compose http request functions with the given options merged with the argument options

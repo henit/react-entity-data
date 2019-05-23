@@ -121,7 +121,10 @@ StringInput.propTypes = {
   onBlur: PropTypes.func,
   onKeyDown: PropTypes.func,
   onKeyUp: PropTypes.func,
-  onPressEnter: PropTypes.func
+  onPressEnter: PropTypes.func,
+  changed: PropTypes.bool,
+  saving: PropTypes.bool,
+  saved: PropTypes.bool
 };
 
 StringInput.defaultProps = {
@@ -129,7 +132,10 @@ StringInput.defaultProps = {
   type: 'text',
   allowEmpty: false,
   maxHeight: 400,
-  autoFocus: false
+  autoFocus: false,
+  changed: false,
+  saving: false,
+  saved: false
 };
 
 export const EntityStringInput = withEntityData(StringInput);

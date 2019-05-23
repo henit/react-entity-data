@@ -1,7 +1,6 @@
 import _get from 'lodash/fp/get';
 import React from 'react';
 import PropTypes from 'prop-types';
-// import EntityState from '../EntityState';
 import { EntityState } from 'entity-state';
 
 export const EntityDataContext = React.createContext({
@@ -52,12 +51,21 @@ export function withEntityData(Component) {
       const data = this.props.data || this.context.data;
       const value = this.props.value || (data && path) ? _get(path, data) : undefined;
 
+      const { pending, operation, changePaths, updatedPaths } = this.context || {};
+
+      const updating = path && pending && operation === 'update';
+      const changed = path && (changePaths || []).includes(path);
+      const updated = path && (updatedPaths || []).includes(path);
+
       return (
         <Component
           { ...this.props }
           value={ value }
           onChange={ this.handleChange }
-          onError={ this.handleError } />
+          onError={ this.handleError }
+          changed={ changed }
+          updating={ changed && updating }
+          updated={ updated } />
       );
     }
 
@@ -93,7 +101,12 @@ export default class EntityData extends React.PureComponent {
     ]),
 
     path: PropTypes.string,
-    iterate: PropTypes.bool
+    iterate: PropTypes.bool,
+    saveState: PropTypes.number // Time (ms) after save for holding save state
+  };
+
+  static defaultProps = {
+
   };
 
   handleChange = (path, value, data) => {
@@ -126,11 +139,20 @@ export default class EntityData extends React.PureComponent {
     const sourceData = state ? EntityState.dataWithChanges(state) : data || _get('context.data', this);
     const innerData = path ? _get(path, sourceData) : sourceData;
 
+    const changePaths = Object.keys(_get('pathChange', state) || {});
+    const initialPaths = Object.keys(_get('pathInitial', state) || {});
+    const updatedPaths = initialPaths.filter(path => !changePaths.includes(path))
+      .filter(path => Object.keys(state));
+
     return (
       <EntityDataContext.Provider value={{
         data: innerData,
+        pending: _get('pending', state),
+        operation: _get('operation', state),
         onChange: this.handleChange,
-        onError: this.props.onError
+        onError: this.props.onError,
+        changePaths,
+        updatedPaths
       }}>
         { this.props.iterate && Array.isArray(innerData) ?
           innerData.map((element, index) =>

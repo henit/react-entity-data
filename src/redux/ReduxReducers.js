@@ -1,10 +1,21 @@
 import _get from 'lodash/fp/get';
+import _set from 'lodash/fp/set';
+import _defaultTo from 'lodash/fp/defaultTo';
 import { EntityState } from 'entity-state';
 
 /**
  * Factory functions for redux reducers
  */
 let ReduxReducers = {};
+
+
+ReduxReducers.getEntityState = (state, statePath = undefined) => {
+  return (statePath ? _get(statePath, state) : state) || {};
+};
+
+ReduxReducers.setEntityState = (entityState, state, statePath = undefined) => {
+  return statePath ? _set(statePath, entityState, state) : entityState;
+};
 
 /**
  * Initialize entity state
@@ -98,23 +109,29 @@ ReduxReducers.clean = (state, action, statePath = undefined) =>
  * @param {string} [responsePath] Path into the response structure where the data to put into the state is located
  * @return {object} New state
  */
-ReduxReducers.httpRequest = (state, action, statePath = undefined, responsePath = '') => {
-  const existingState = (statePath ? _get(statePath, state) : state) || {};
+ReduxReducers.httpRequest = (state, action, statePath = undefined) => {
+  const existingEntityState = ReduxReducers.getEntityState(state, statePath);
 
-  return {
-    // Keep existing state metadata that is not inflicted by this request
-    ...existingState,
-    // Overwrite data from response only for the requeast complete dispatch
-    data: action.status === 'complete' ?
-      _get(`response${responsePath ? `.${responsePath}` : ''}`, action)
-      :
-      _get(statePath ? [statePath, 'data'] : 'data', state),
-    loadedAt: action.receivedAt || existingState.loadedAt,
-    error: action.error,
-    pending: action.pending || false
+  const entityState = Object.assign(
+    {
+      ...existingEntityState,
+      pending: _defaultTo(false, action.pending),
+      operation: _defaultTo(undefined, action.operation),
+      error: _defaultTo(undefined, action.error)
+    },
 
-    // METADATA FOR REQUERSTS???
-  };
+    action.load && {
+      data: action.data,
+      loadedAt: action.receivedAt || (new Date()).toISOString()
+    },
+
+    action.clean && {
+      pathChange: {},
+      pathInitial: action.delayCleanInitial ? existingEntityState.pathInitial : {}
+    },
+  );
+
+  return ReduxReducers.setEntityState(entityState, state, statePath);
 };
 
 /**
@@ -151,6 +168,9 @@ ReduxReducers.generateAt = (statePath, types, initialState = EntityState.initial
 
       case types.clear:
         return ReduxReducers.clear(state, action, statePath);
+
+      case types.clean:
+        return ReduxReducers.clean(state, action, statePath);
 
       default:
         return state;
