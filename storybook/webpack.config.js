@@ -27,5 +27,10 @@ module.exports = {
         }
       }
     ]
+  },
+  resolve: {
+    alias: {
+      'entity-state': path.resolve('../entity-state')
+    }
   }
 };

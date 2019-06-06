@@ -46,26 +46,32 @@ export function withEntityData(Component) {
     };
 
     render() {
-      // Provide the direct value if given, otherwese read from the entity data source
-      const path = this.props.path;
+      const { path } = this.props;
+      const { loadedAt, loading, updating, pathChange, pathInitial, pathLoading, error, pathError } = this.context;
       const data = this.props.data || this.context.data;
       const value = this.props.value || (data && path) ? _get(path, data) : undefined;
+      // const valueChanged = Boolean(path && pathChange[path] !== undefined);
+      // const valueUpdating = Boolean(valueChanged && updating);
+      // const valueUpdated = Boolean(path && !updating && !pathChange[path] && pathInitial[path]);
 
-      const { pending, operation, changePaths, updatedPaths } = this.context || {};
-
-      const updating = path && pending && operation === 'update';
-      const changed = path && (changePaths || []).includes(path);
-      const updated = path && (updatedPaths || []).includes(path);
+      // TODO check re-renders
 
       return (
         <Component
           { ...this.props }
           value={ value }
+          // Path specific error when given, else give the error for the whole data set
+          error={ path ? pathError[path] : error }
           onChange={ this.handleChange }
           onError={ this.handleError }
-          changed={ changed }
-          updating={ changed && updating }
-          updated={ updated } />
+          loadedAt={ loadedAt }
+          // changed={ valueChanged }
+          changed={ path ? pathChange[path] !== undefined : false }
+          // updating={ valueUpdating }
+          loading={ path ? Boolean(pathLoading[path]) : loading }
+          updating={ path ? Boolean(pathChange[path] !== undefined && updating) : updating }
+          // updated={ valueUpdated }
+          updated={ path ? Boolean(!updating && !pathChange[path] && pathInitial[path]) : false } />
       );
     }
 
@@ -102,6 +108,7 @@ export default class EntityData extends React.PureComponent {
 
     path: PropTypes.string,
     iterate: PropTypes.bool,
+    iterateKey: PropTypes.func, // Function for getting element key in iterations
     saveState: PropTypes.number // Time (ms) after save for holding save state
   };
 
@@ -126,38 +133,74 @@ export default class EntityData extends React.PureComponent {
 
   };
 
+  getFromState(path, def = undefined) {
+    return this.props.state ? (_get(path, this.props.state) || def) : (_get(`context.${path}`, this) || def);
+  }
+
+  recursiveStructure(recursivePath, wholePath) {
+    // Recursive structures is entity state data that has path into the data as key (like pathChange).
+    // When an EntityData has a path (indenting into the data structure), update the path based structures
+    // so the inner component can receive both data and metadata as if the indented level where the whole
+    // data set
+
+    const { path } = this.props;
+    const outer = this.getFromState(recursivePath, {});
+
+    const inner = path ?
+      Object.keys(outer)
+        .filter(pathKey => pathKey.substring(0, path.length) === path && pathKey !== path)
+        .reduce((inner, pathKey) => ({
+          ...inner,
+          [pathKey.substring(path.length + 1)]: outer[pathKey]
+        }), {})
+      :
+      outer;
+
+    if (wholePath === undefined) {
+      return {
+        [recursivePath]: inner
+      };
+    }
+
+    return {
+      [wholePath]: (outer && outer[path] !== undefined) ?
+        outer[path]
+        :
+        this.getFromState(wholePath),
+      [recursivePath]: inner
+    };
+  }
+
   render() {
     const {
       path,
       state,
-      data,
+      iterate,
+      iterateKey,
       children
     } = this.props;
 
     // If state is given, merge local changes to get the current state of the data.
     // If no direct state/data is given use from outer context EntityData
-    const sourceData = state ? EntityState.dataWithChanges(state) : data || _get('context.data', this);
-    const innerData = path ? _get(path, sourceData) : sourceData;
-
-    const changePaths = Object.keys(_get('pathChange', state) || {});
-    const initialPaths = Object.keys(_get('pathInitial', state) || {});
-    const updatedPaths = initialPaths.filter(path => !changePaths.includes(path))
-      .filter(path => Object.keys(state));
+    const sourceData = state ? EntityState.dataWithChanges(state) : this.props.data || _get('context.data', this);
+    const data = path ? _get(path, sourceData) : sourceData;
 
     return (
       <EntityDataContext.Provider value={{
-        data: innerData,
-        pending: _get('pending', state),
-        operation: _get('operation', state),
+        data,
+        loadedAt: state ? state.loadedAt : _get('context.loadedAt', this),
+        ...this.recursiveStructure('pathError', 'error'),
+        ...this.recursiveStructure('pathChange'),
+        ...this.recursiveStructure('pathInitial'),
+        ...this.recursiveStructure('pathLoading', 'loading'),
+        ...this.recursiveStructure('pathUpdating', 'updating'),
         onChange: this.handleChange,
-        onError: this.props.onError,
-        changePaths,
-        updatedPaths
+        onError: this.props.onError
       }}>
-        { this.props.iterate && Array.isArray(innerData) ?
-          innerData.map((element, index) =>
+        { iterate && Array.isArray(data) ?
+          data.map((element, index) =>
             <EntityData
-              key={ index }
+              key={ iterateKey ? iterateKey(element) : index }
               path={ index.toString() }
               onChange={ this.props.onElementChange }
             >
@@ -165,7 +208,7 @@ export default class EntityData extends React.PureComponent {
             </EntityData>
           )
           :
-          (typeof children === 'function' ? children(innerData) : children)
+          (typeof children === 'function' ? children(data) : children)
         }
       </EntityDataContext.Provider>
     );

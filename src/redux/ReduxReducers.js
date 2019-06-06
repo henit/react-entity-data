@@ -112,18 +112,36 @@ ReduxReducers.clean = (state, action, statePath = undefined) =>
 ReduxReducers.httpRequest = (state, action, statePath = undefined) => {
   const existingEntityState = ReduxReducers.getEntityState(state, statePath);
 
+  if (action.clear) {
+    // return EntityState.clear();
+    return ReduxReducers.setEntityState(undefined, state, statePath);
+  }
+
   const entityState = Object.assign(
     {
       ...existingEntityState,
-      pending: _defaultTo(false, action.pending),
-      operation: _defaultTo(undefined, action.operation),
       error: _defaultTo(undefined, action.error)
     },
 
-    action.load && {
-      data: action.data,
-      loadedAt: action.receivedAt || (new Date()).toISOString()
+    // Loading / updating state
+    action.path ? {
+      pathLoading: _set(action.path, action.loading ? true : undefined),
+      pathUpdating: _set(action.path, action.updating ? true : undefined)
+    } : {
+      loading: _defaultTo(false, action.loading),
+      updating: _defaultTo(false, action.updating)
     },
+
+
+    // Load data into state
+    action.loadResponse && (
+      action.path ? {
+        data: _set(action.path, action.data, existingEntityState.data)
+      } : {
+        data: action.data,
+        loadedAt: action.receivedAt || (new Date()).toISOString()
+      }
+    ),
 
     action.clean && {
       pathChange: {},

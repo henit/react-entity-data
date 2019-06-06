@@ -1,11 +1,13 @@
+/* eslint-disable max-lines */
 import React from 'react';
+import PropTypes from 'prop-types';
 import { createStore } from 'redux';
 import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
-import { withKnobs, radios } from '@storybook/addon-knobs';
+import { withKnobs, radios, boolean, select } from '@storybook/addon-knobs';
 import { withReduxStore, DebugReduxState } from '../ReduxState';
 import { EntityState, ReduxActions, ReduxReducers } from '../../src';
-import { withEntityData } from '../../src/components/EntityData';
+import { withEntityData, EntityDataContext } from '../../src/components/EntityData';
 import { EntityData, StringField, EntityStringField } from '../../src/components';
 
 // Single entity state
@@ -81,20 +83,30 @@ let listActions = ReduxActions.all({
   clear: LIST_CLEAR_DATA
 });
 
-const listInitialState = EntityState.load([
-  {
-    name: 'Entity one',
-    number: 42
+const listInitialState = {
+  ...EntityState.load([
+    {
+      name: 'Entity one',
+      number: 42
+    },
+    {
+      name: 'Entity two',
+      number: 43
+    },
+    {
+      name: 'Entity three',
+      number: 44
+    }
+  ]),
+  error: { message: 'Whats wrong?' },
+  pathError: {
+    1: { message: 'Entity two has some errors' },
+    '2.name': { message: 'Wrong name for nr three' }
   },
-  {
-    name: 'Entity two',
-    number: 43
-  },
-  {
-    name: 'Entity three',
-    number: 44
+  pathLoading: {
+    1: true
   }
-]);
+};
 
 const listReducer = ReduxReducers.generate({
   initialize: LIST_INITIALIZE_DATA,
@@ -117,10 +129,94 @@ const ComplainingEntityStringField = withEntityData((props) => {
       } />
   );
 });
+
+
+class DebugField extends React.Component {
+
+  render() {
+    const { changed, updating, updated, children } = this.props;
+
+    return (
+      <div>
+        <div>
+          { children }
+        </div>
+
+        <div style={{
+          display: 'flex',
+          flexFlow: 'row',
+          alignItems: 'flex-start',
+          paddingTop: '8px'
+        }}>
+          <div style={{ marginRight: '32px' }}>
+            <strong>Changed: </strong>{ changed === undefined ? 'undefined' : changed.toString() }
+          </div>
+          <div style={{ marginRight: '16px' }}>
+            <strong>Updating: </strong>{ updating === undefined ? 'undefined' : updating.toString() }
+          </div>
+          <div style={{ marginRight: '16px' }}>
+            <strong>Updated: </strong>{ updated === undefined ? 'undefined' : updated.toString() }
+          </div>
+
+          <details>
+            <summary style={{ outline: 'none', cursor: 'pointer' }}>Context</summary>
+            <pre>{ JSON.stringify(this.context, null, 4) }</pre>
+          </details>
+        </div>
+      </div>
+    );
+  }
+}
+DebugField.contextType = EntityDataContext;
+DebugField.propTypes = {
+  changed: PropTypes.bool,
+  updating: PropTypes.bool,
+  updated: PropTypes.bool,
+  children: PropTypes.node
+};
+
+const EntityDebugField = withEntityData(DebugField);
+
 const getOnChangeAction = () => radios('On change handler', {
   'Set changes directly on the data set': 'set',
   'Stage changes for update later': 'stage'
 }, 'set');
+
+function prepareState(state) {
+  /* eslint-disable max-len */
+  return {
+    ...state,
+    loading: select('loading', { True: true, False: false, Null: null }, null),
+    updating: select('updating', { True: true, False: false, Null: null }, null),
+    pathLoading: {
+      0: select('pathLoading.0', { True: true, False: false, Null: null }, null),
+      1: select('pathLoading.1', { True: true, False: false, Null: null }, null),
+      2: select('pathLoading.2', { True: true, False: false, Null: null }, null)
+    },
+    pathUpdating: {
+      0: select('pathUpdating.0', { True: true, False: false, Null: null }, null),
+      1: select('pathUpdating.1', { True: true, False: false, Null: null }, null),
+      2: select('pathUpdating.2', { True: true, False: false, Null: null }, null)
+    },
+    pathChange: {
+      '0.name': boolean('pathChange.0.name: "Nr. one"', false) ? 'Nr. one' : undefined,
+      '1.name': boolean('pathChange.1.name: "Nr. two"', false) ? 'Nr. two' : undefined,
+      '2.name': boolean('pathChange.2.name: "Nr. three"', false) ? 'Nr. three' : undefined
+    },
+    pathInitial: {
+      '0.name': boolean('pathInitial.0.name: "Entity one"', false) ? 'Entity one' : undefined,
+      '1.name': boolean('pathInitial.1.name: "Entity two"', false) ? 'Entity two' : undefined,
+      '2.name': boolean('pathInitial.2.name: "Entity three"', false) ? 'Entity three' : undefined
+    },
+    error: boolean('error: Whats wrong?', false) ? { message: 'Whats wrong?' } : undefined,
+    pathError: {
+      0: boolean('pathError.0: { message: "Entity one has error" }', false) ? { message: 'Entity one has error' } : undefined,
+      1: boolean('pathError.1: { message: "Entity two has error" }', false) ? { message: 'Entity two has error' } : undefined,
+      2: boolean('pathError.2: { message: "Entity three has error" }', false) ? { message: 'Entity three has error' } : undefined
+    }
+  };
+  /* eslint-enable max-len */
+}
 
 const listOnChange = (path, value, data) => {
   // Update the store
@@ -156,7 +252,7 @@ storiesOf('EntityData', module)
         </h3>
 
         <EntityData
-          state={ state }
+          state={ prepareState(state) }
           onChange={ entityOnChange }
           onError={ entityOnError }
         >
@@ -174,7 +270,7 @@ storiesOf('EntityData', module)
           <ComplainingEntityStringField label="Complaining field" path="complain" />
         </EntityData>
 
-        <DebugReduxState state={ state } />
+        <DebugReduxState state={ prepareState(state) } />
         <a onClick={ () => dispatch(entityActions.initialize()) }>
           Initialize
         </a>
@@ -203,7 +299,7 @@ storiesOf('EntityData', module)
         </h3>
 
         <EntityData
-          state={ state }
+          state={ prepareState(state) }
           onChange={ listOnChange }
           onError={ listOnError }
         >
@@ -219,7 +315,7 @@ storiesOf('EntityData', module)
           <hr />
         </EntityData>
 
-        <DebugReduxState state={ state } />
+        <DebugReduxState state={ prepareState(state) } />
       </div>
     );
   }))
@@ -237,19 +333,110 @@ storiesOf('EntityData', module)
         </h3>
 
         <EntityData
-          state={ state }
+          state={ prepareState(state) }
           onChange={ listOnChange }
           onElementChange={ listOnElementChange }
           onError={ listOnError }
           iterate
         >
-          <EntityStringField label="Name" path="name" />
-          <EntityStringField label="Number" path="number" />
+          <EntityDebugField path="name">
+            <EntityStringField label="Name" path="name" />
+          </EntityDebugField>
+
+          <EntityDebugField path="number">
+            <EntityStringField label="Number" path="number" />
+          </EntityDebugField>
 
           <hr />
         </EntityData>
 
-        <DebugReduxState state={ state } />
+        <DebugReduxState state={ prepareState(state) } />
+      </div>
+    );
+  }))
+  .add('Component props', withReduxStore(listStore, (state, dispatch) => {
+
+    const unchangedState = EntityState.load({
+      name: 'John Doe',
+      number: 42
+    });
+    const nameChangedState = {
+      ...unchangedState,
+      pathChange: {
+        name: 'John Smith'
+      }
+    };
+    const nameUpdatingState = {
+      ...unchangedState,
+      pathChange: {
+        name: 'John Smith'
+      },
+      pathInitial: {
+        name: 'John Doe'
+      },
+      updating: true
+    };
+    const nameUpdatedState = {
+      ...unchangedState,
+      pathInitial: {
+        name: 'John Doe'
+      }
+    };
+
+    return (
+      <div>
+        <h1>EntityData</h1>
+
+        <h2>Component props</h2>
+
+        <h3>Unchanged</h3>
+        <EntityData state={ unchangedState }>
+          <EntityDebugField path="name">
+            <EntityStringField label="Name" path="name" />
+          </EntityDebugField>
+          <EntityDebugField path="number">
+            <EntityStringField label="Number" path="number" />
+          </EntityDebugField>
+        </EntityData>
+
+        <DebugReduxState state={ unchangedState } />
+
+        <h3>Name changed</h3>
+        <EntityData state={ nameChangedState }>
+          <EntityDebugField path="name">
+            <EntityStringField label="Name" path="name" />
+          </EntityDebugField>
+          <EntityDebugField path="number">
+            <EntityStringField label="Number" path="number" />
+          </EntityDebugField>
+        </EntityData>
+
+        <DebugReduxState state={ nameChangedState } />
+
+        <h3>Updating name</h3>
+        <EntityData state={ nameUpdatingState }>
+          <EntityDebugField path="name">
+            <EntityStringField label="Name" path="name" />
+          </EntityDebugField>
+          <EntityDebugField path="number">
+            <EntityStringField label="Number" path="number" />
+          </EntityDebugField>
+        </EntityData>
+
+        <DebugReduxState state={ nameUpdatingState } />
+
+        <h3>Updated name</h3>
+        <EntityData state={ nameUpdatedState }>
+          <EntityDebugField path="name">
+            <EntityStringField label="Name" path="name" />
+          </EntityDebugField>
+          <EntityDebugField path="number">
+            <EntityStringField label="Number" path="number" />
+          </EntityDebugField>
+        </EntityData>
+
+        <DebugReduxState state={ nameUpdatedState } />
+
       </div>
     );
   }))

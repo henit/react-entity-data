@@ -1,68 +1,67 @@
 import _get from 'lodash/fp/get';
 import _partial from 'lodash/fp/partial';
-import _defaultTo from 'lodash/fp/defaultTo';
 import { Http } from 'entity-state';
 
 /**
  * Factory functions for redux action creators
  */
-let ReduxActions = {};
+let ReduxAC = {};
 
 /**
  * Initialize entity state
  * @param {string} type Action type constant
- * @return {object} Action
+ * @return {function} Action creator
  */
-ReduxActions.initialize = type => () => ({ type });
+ReduxAC.initialize = type => () => ({ type });
 
 /**
  * Load data into entity state
  * @param {string} type Action type constant
- * @return {object} Action
+ * @return {function} Action creator
  */
-ReduxActions.load = type => data => ({ type, data });
+ReduxAC.load = type => data => ({ type, data });
 
 /**
  * Set new value in entity state data
  * @param {string} type Action type constant
- * @return {object} Action
+ * @return {function} Action creator
  */
-ReduxActions.set = type => (path, value) => ({ type, path, value });
+ReduxAC.set = type => (path, value) => ({ type, path, value });
 
 /**
  * Stage a data change in pathChanges (while leaving the original data unchanged)
  * @param {string} type Action type constant
- * @return {object} Action
+ * @return {function} Action creator
  */
-ReduxActions.stage = type => (path, value) => ({ type, path, value });
+ReduxAC.stage = type => (path, value) => ({ type, path, value });
 
 /**
  * Set an error (for the whole data set) into the entity state
  * @param {string} type Action type constant
- * @return {object} Action
+ * @return {function} Action creator
  */
-ReduxActions.error = type => error => ({ type, error });
+ReduxAC.error = type => error => ({ type, error });
 
 /**
  * Set a path-specific error into the entity state
  * @param {string} type Action type constant
- * @return {object} Action
+ * @return {function} Action creator
  */
-ReduxActions.pathError = type => (path, error) => ({ type, path, error });
+ReduxAC.pathError = type => (path, error) => ({ type, path, error });
 
 /**
  * Clear the entity state
  * @param {string} type Action type constant
- * @return {object} Action
+ * @return {function} Action creator
  */
-ReduxActions.clear = type => () => ({ type });
+ReduxAC.clear = type => () => ({ type });
 
 /**
  * Clean the entity state (removing pathChange, errors etc but keeping the data)
  * @param {string} type Action type constant
- * @return {object} Action
+ * @return {function} Action creator
  */
-ReduxActions.clean = type => () => ({ type });
+ReduxAC.clean = type => () => ({ type });
 
 // Main request method
 
@@ -71,14 +70,18 @@ ReduxActions.clean = type => () => ({ type });
  * @param {string} type Action type constant
  * @param {function} requestFn Async function making the actual http request
  * @param {object} [options] Options
- * @param {string} [option.operation] CRUD operation type. "create", "read", "update" or "delete"
- * @param {bool} [options.load] Load the request response into data when completed (default: true)
- * @param {bool} [options.clean] Clean state when state completes (default: true)
+ * @param {string} [option.loading] True to flag the state as loading during request
+ * @param {string} [option.updating] True ito flat the state as updating during request
+ * @param {string} [option.path] Path to what part of the dataset the request is for. Undefined for
+                                 the whole set
+ * @param {bool} [options.loadResponse] Load response data when request is complete
+ * @param {bool} [options.clean] Clean the state when request completes
+ * @param {bool} [options.clear] Clear the whole state when request completes
  * @param {number} [options.delayCleanInitial] Time (ms or true for default) before cleaning initial values from state
  * @param {string} [options.responsePath] Path into the response that contains the data for the state (if not at root)
- * @return {function} Thunk action
+ * @return {function} Action creator (thunk)
  */
-ReduxActions.httpRequest = (type, requestFn, options = {}) => {
+ReduxAC.httpRequest = (type, requestFn, options = {}) => {
   const typeInitiate = (Array.isArray(type) && type[0]) || type;
   const typeComplete = (Array.isArray(type) && type[1]) || type;
   const typeError = (Array.isArray(type) && type[2]) || type;
@@ -87,33 +90,40 @@ ReduxActions.httpRequest = (type, requestFn, options = {}) => {
   return (...args) => async dispatch => {
     dispatch({
       type: typeInitiate,
-      operation: options.operation,
       status: 'initiate',
-      pending: true
+      loading: options.loading,
+      updating: options.updating,
+      path: options.path
     });
 
     try {
       const { statusCode, response } = await requestFn(...args);
+      // await new Promise(resolve => setTimeout(resolve, 1000)); // Testing delayed response
 
-      //setTimeout(() => {
       dispatch({
         type: typeComplete,
         status: 'complete',
-        pending: false,
+        loadResponse: options.loadResponse,
+        loading: false,
+        updating: false,
+        path: options.path,
+        load: options.load,
+        clean: options.clean,
+        clear: options.clear,
         receivedAt: (new Date()).toISOString(),
-        clean: _defaultTo(true, options.clean),
         delayCleanInitial: Boolean(options.delayCleanInitial),
-        load: _defaultTo(true, options.load),
         data: options.responsePath ? _get(options.responsePath, response) : response
       });
-      //}, 2000);
 
-      if (options.delayCleanInitial) {
+      if (options.clean && options.delayCleanInitial) {
         setTimeout(() => {
 
           dispatch({
             type: typeClean,
             status: 'clean',
+            loading: false,
+            updating: false,
+            path: options.path,
             clean: true
           });
 
@@ -129,7 +139,9 @@ ReduxActions.httpRequest = (type, requestFn, options = {}) => {
       dispatch({
         type: typeError,
         status: 'error',
-        pending: false,
+        loading: false,
+        updating: false,
+        path: options.path,
         statusCode: e.statusCode,
         error: {
           message: e.message,
@@ -142,12 +154,32 @@ ReduxActions.httpRequest = (type, requestFn, options = {}) => {
   };
 };
 
+
+/**
+ * Dispatch action from given action creator using the data from given path in the state
+ * @param {string|array} statePath String for path to entity state, data from state will be sent to action.
+                         Alternatively, array of path to entity state, and path inside data to target data.
+ * @param {function} actionCreator Action creator that will be used to create the action to dispatch with target data
+ * @return {function} Action creator
+ */
+ReduxAC.withData = (statePath, actionCreator) => (...args) => (dispatch, getState) => {
+  const state = getState();
+
+  const data = Array.isArray(statePath) ?
+    _get(`${statePath[0]}.data.${statePath[1]}`, state)
+    :
+    _get(`${statePath}.data`, state);
+
+  return dispatch(actionCreator(data));
+};
+
+
 /**
  * Compose http request functions with the given options merged with the argument options
  * @param {object} [options] Options to apply to request calls
  * @return {object} Function literal
  */
-ReduxActions.withOptions = (options = {}) => ({
+ReduxAC.withOptions = (options = {}) => ({
   request: (callOptions = {}) => Http.request({ ...options, ...callOptions }),
   get: (path, query, callOptions = {}) => Http.get(path, query, { ...options, ...callOptions }),
   post: (path, body, callOptions = {}) => Http.post(path, body, { ...options, ...callOptions }),
@@ -162,16 +194,16 @@ ReduxActions.withOptions = (options = {}) => ({
  * @param {object} types Types (i.e { load: LOAD_USER })
  * @return {object} Function lietarl
  */
-ReduxActions.all = types => ({
-  initialize: types.initialize ? ReduxActions.initialize(types.initialize) : undefined,
-  load: types.load ? ReduxActions.load(types.load) : undefined,
-  set: types.set ? ReduxActions.set(types.set) : undefined,
-  stage: types.stage ? ReduxActions.stage(types.stage) : undefined,
-  error: types.error ? ReduxActions.error(types.error) : undefined,
-  pathError: types.pathError ? ReduxActions.pathError(types.pathError) : undefined,
-  clear: types.clear ? ReduxActions.clear(types.clear) : undefined,
+ReduxAC.all = types => ({
+  initialize: types.initialize ? ReduxAC.initialize(types.initialize) : undefined,
+  load: types.load ? ReduxAC.load(types.load) : undefined,
+  set: types.set ? ReduxAC.set(types.set) : undefined,
+  stage: types.stage ? ReduxAC.stage(types.stage) : undefined,
+  error: types.error ? ReduxAC.error(types.error) : undefined,
+  pathError: types.pathError ? ReduxAC.pathError(types.pathError) : undefined,
+  clear: types.clear ? ReduxAC.clear(types.clear) : undefined,
 
-  httpRequest: types.httpRequest ? _partial(ReduxActions.httpRequest, [types.httpRequest]) : undefined
+  httpRequest: types.httpRequest ? _partial(ReduxAC.httpRequest, [types.httpRequest]) : undefined
 });
 
-export default ReduxActions;
+export default ReduxAC;
