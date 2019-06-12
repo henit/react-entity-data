@@ -1,6 +1,6 @@
 import _get from 'lodash/fp/get';
 import _partial from 'lodash/fp/partial';
-import { Http } from 'entity-state';
+import { EntityState, Http } from 'entity-state';
 
 /**
  * Factory functions for redux action creators
@@ -98,7 +98,7 @@ ReduxAC.httpRequest = (type, requestFn, options = {}) => {
 
     try {
       const { statusCode, response } = await requestFn(...args);
-      // await new Promise(resolve => setTimeout(resolve, 1000)); // Testing delayed response
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Testing delayed response
 
       dispatch({
         type: typeComplete,
@@ -163,14 +163,28 @@ ReduxAC.httpRequest = (type, requestFn, options = {}) => {
  * @return {function} Action creator
  */
 ReduxAC.withData = (statePath, actionCreator) => (...args) => (dispatch, getState) => {
-  const state = getState();
-
   const data = Array.isArray(statePath) ?
-    _get(`${statePath[0]}.data.${statePath[1]}`, state)
+    _get(`${statePath[0]}.data.${statePath[1]}`, getState())
     :
-    _get(`${statePath}.data`, state);
+    _get(`${statePath}.data`, getState());
 
   return dispatch(actionCreator(data));
+};
+
+/**
+ * Dispatch action from given action creator using the data (including local changes) from given path in the state
+ * @param {string|array} statePath String for path to entity state, data from state will be sent to action.
+                         Alternatively, array of path to entity state, and path inside data to target data.
+ * @param {function} actionCreator Action creator that will be used to create the action to dispatch with target data
+ * @return {function} Action creator
+ */
+ReduxAC.withChangedData = (statePath, actionCreator) => (...args) => (dispatch, getState) => {
+  const entityState = Array.isArray(statePath) ?
+    _get(statePath[0], getState())
+    :
+    _get(statePath, getState());
+
+  return dispatch(actionCreator(EntityState.dataWithChanges(entityState)));
 };
 
 
