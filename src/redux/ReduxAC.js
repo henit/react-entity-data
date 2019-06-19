@@ -98,7 +98,7 @@ ReduxAC.httpRequest = (type, requestFn, options = {}) => {
 
     try {
       const { statusCode, response } = await requestFn(...args);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Testing delayed response
+      // await new Promise(resolve => setTimeout(resolve, 3000)); // Testing delayed response
 
       dispatch({
         type: typeComplete,

@@ -6,7 +6,7 @@ import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 import { withKnobs, radios, boolean, select } from '@storybook/addon-knobs';
 import { withReduxStore, DebugReduxState } from '../ReduxState';
-import { EntityState, ReduxActions, ReduxReducers } from '../../src';
+import { EntityState, ReduxAC, ReduxReducers } from '../../src';
 import { withEntityData, EntityDataContext } from '../../src/components/EntityData';
 import { EntityData, StringField, EntityStringField } from '../../src/components';
 
@@ -19,7 +19,7 @@ const ENTITY_DATA_ERROR = 'ENTITY_DATA_ERROR';
 const ENTITY_DATA_PATH_ERROR = 'ENTITY_DATA_PATH_ERROR';
 const ENTITY_CLEAR_DATA = 'ENTITY_CLEAR_DATA';
 
-let entityActions = ReduxActions.all({
+let entityActions = ReduxAC.all({
   initialize: ENTITY_INITIALIZE_DATA,
   load: ENTITY_LOAD_DATA,
   set: ENTITY_SET_DATA,
@@ -73,7 +73,7 @@ const LIST_DATA_ERROR = 'LIST_DATA_ERROR';
 const LIST_DATA_PATH_ERROR = 'LIST_DATA_PATH_ERROR';
 const LIST_CLEAR_DATA = 'LIST_CLEAR_DATA';
 
-let listActions = ReduxActions.all({
+let listActions = ReduxAC.all({
   initialize: LIST_INITIALIZE_DATA,
   load: LIST_LOAD_DATA,
   set: LIST_SET_DATA,
