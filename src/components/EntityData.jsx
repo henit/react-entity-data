@@ -50,9 +50,6 @@ export function withEntityData(Component) {
       const { loadedAt, loading, updating, pathChange, pathInitial, pathLoading, error, pathError } = this.context;
       const data = this.props.data || this.context.data;
       const value = this.props.value || (data && path) ? _get(path, data) : undefined;
-      // const valueChanged = Boolean(path && pathChange[path] !== undefined);
-      // const valueUpdating = Boolean(valueChanged && updating);
-      // const valueUpdated = Boolean(path && !updating && !pathChange[path] && pathInitial[path]);
 
       // TODO check re-renders
 
@@ -65,12 +62,9 @@ export function withEntityData(Component) {
           onChange={ this.handleChange }
           onError={ this.handleError }
           loadedAt={ loadedAt }
-          // changed={ valueChanged }
           changed={ path ? pathChange[path] !== undefined : false }
-          // updating={ valueUpdating }
           loading={ path ? Boolean(pathLoading[path]) : loading }
           updating={ path ? Boolean(pathChange[path] !== undefined && updating) : updating }
-          // updated={ valueUpdated }
           updated={ path ? Boolean(!updating && !pathChange[path] && pathInitial[path]) : false } />
       );
     }
@@ -99,6 +93,14 @@ export default class EntityData extends React.PureComponent {
     // How long to wayt (debounce) before running onUpdate when inputs are changed
     onChange: PropTypes.func,
     onElementChange: PropTypes.func,
+    onMode: PropTypes.func,
+    onElementMode: PropTypes.func,
+    onSubmit: PropTypes.func,
+    onElementSubmit: PropTypes.func,
+    onCancel: PropTypes.func,
+    onElementCancel: PropTypes.func,
+    onDelete: PropTypes.func,
+    onElementDelete: PropTypes.func,
     onError: PropTypes.func,
     onElementError: PropTypes.func,
     children: PropTypes.oneOfType([
@@ -108,13 +110,67 @@ export default class EntityData extends React.PureComponent {
 
     path: PropTypes.string,
     iterate: PropTypes.bool,
-    iterateKey: PropTypes.func, // Function for getting element key in iterations
-    saveState: PropTypes.number // Time (ms) after save for holding save state
+    iterateKey: PropTypes.func // Function for getting element key in iterations
   };
 
   static defaultProps = {
 
   };
+
+  state = {
+    editing: false
+  };
+
+  get base() {
+    // If there is state/data given to the component as props, consider it a base component and skip
+    // bubbling of events to possible parent EntityData components.
+    return this.props.state || this.props.data;
+  }
+
+  get data() {
+    const { state, path } = this.props;
+    // If state is given, merge local changes to get the current state of the data.
+    // If no direct state/data is given use from outer context EntityData
+    const sourceData = state ? EntityState.dataWithChanges(state) : this.props.data || _get('context.data', this);
+    return path ? _get(path, sourceData) : sourceData;
+  }
+
+  toggleEditing = () => {
+    this.setState({
+      editing: !this.state.editing
+    });
+  };
+
+  bubbleEvent = (event, subPath, ...args) => {
+    const { onMode, onSubmit, onCancel, onDelete } = this.props;
+
+    // Call the event-prop of the EntityData implementation if given
+    switch (event) {
+      case 'mode': onMode && onMode(subPath, this.data, ...args); break;
+      case 'submit': onSubmit && onSubmit(subPath, this.data, ...args); break;
+      case 'cancel': onCancel && onCancel(subPath, this.data, ...args); break;
+      case 'delete': onDelete && onDelete(subPath, this.data, ...args);  break;
+    }
+
+    if (this.base) {
+      // Skip bubbling events for base EntityData
+      return;
+    }
+
+    // Bubble the event up the EntityData-tree. If this EventData was indented with a path from the
+    // parent structure, prefix it (from the path prop)
+    const fullPath = [this.props.path, subPath].filter(Boolean).join('.') || undefined;
+    this.context.bubbleEvent && this.context.bubbleEvent(event, fullPath);
+  };
+
+  handleMode = (...args) => this.bubbleEvent('mode', undefined, ...args);
+  handlePathMode = (subPath, ...args) => this.bubbleEvent('mode', subPath, ...args);
+  handleSubmit = (...args) => this.bubbleEvent('submit', undefined, ...args);
+  handlePathSubmit = (subPath, ...args) => this.bubbleEvent('submit', subPath, ...args);
+  handleCancel = (...args) => this.bubbleEvent('cancel', undefined, ...args);
+  handlePathCancel = (subPath, ...args) => this.bubbleEvent('cancel', subPath, ...args);
+  handleDelete = (...args) => this.bubbleEvent('delete', undefined, ...args);
+  handlePathDelete = (subPath, ...args) => this.bubbleEvent('delete', subPath, ...args);
 
   handleChange = (path, value, data) => {
     // Direct onChange on this instance. Use the inner path regardless of outer EntityData components
@@ -130,7 +186,6 @@ export default class EntityData extends React.PureComponent {
     const fullPath = [this.context.path, this.props.path, path].filter(Boolean).join('.');
 
     this.context.onChange && this.context.onChange(fullPath, value, this.context.data);
-
   };
 
   getFromState(path, def = undefined) {
@@ -173,17 +228,18 @@ export default class EntityData extends React.PureComponent {
 
   render() {
     const {
-      path,
+      // path,
       state,
       iterate,
       iterateKey,
+      onMode,
+      onSubmit,
+      onCancel,
+      onDelete,
       children
     } = this.props;
 
-    // If state is given, merge local changes to get the current state of the data.
-    // If no direct state/data is given use from outer context EntityData
-    const sourceData = state ? EntityState.dataWithChanges(state) : this.props.data || _get('context.data', this);
-    const data = path ? _get(path, sourceData) : sourceData;
+    const data = this.data;
 
     return (
       <EntityDataContext.Provider value={{
@@ -192,9 +248,17 @@ export default class EntityData extends React.PureComponent {
         ...this.recursiveStructure('pathError', 'error'),
         ...this.recursiveStructure('pathChange'),
         ...this.recursiveStructure('pathInitial'),
+        ...this.recursiveStructure('pathMode', 'mode'),
         ...this.recursiveStructure('pathLoading', 'loading'),
         ...this.recursiveStructure('pathUpdating', 'updating'),
+        editing: this.state.editing,
+        onToggleEdit: this.toggleEditing,
         onChange: this.handleChange,
+        handleCancel: (onCancel || (!this.base && this.context.handleCancel)) ? this.handleCancel : undefined,
+        handleDelete: (onDelete || (!this.base && this.context.handleDelete)) ? this.handleDelete : undefined,
+        handleMode: (onMode || (!this.base && this.context.handleMode)) ? this.handleMode : undefined,
+        handleSubmit: (onSubmit || (!this.base && this.context.handleSubmit)) ? this.handleSubmit : undefined,
+        bubbleEvent: this.bubbleEvent,
         onError: this.props.onError
       }}>
         { iterate && Array.isArray(data) ?
@@ -203,6 +267,9 @@ export default class EntityData extends React.PureComponent {
               key={ iterateKey ? iterateKey(element) : index }
               path={ index.toString() }
               onChange={ this.props.onElementChange }
+              onSubmit={ this.props.onElementSubmit }
+              onDelete={ this.props.onElementDelete }
+              onMode={ this.props.onElementMode }
             >
               { typeof children === 'function' ? children(element, index) : children }
             </EntityData>

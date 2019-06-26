@@ -187,6 +187,13 @@ ReduxAC.withChangedData = (statePath, actionCreator) => (...args) => (dispatch, 
   return dispatch(actionCreator(EntityState.dataWithChanges(entityState)));
 };
 
+/**
+ * Toggle mode value of entity state
+ * @param {string} type Action type constant
+ * @param {string} value Value to toggle
+ * @return {function} Action creator
+ */
+ReduxAC.toggleMode = (type, value) => path => ({ type, path, value });
 
 /**
  * Compose http request functions with the given options merged with the argument options

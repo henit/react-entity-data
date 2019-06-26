@@ -28,9 +28,10 @@
   },
   "homepage": "https://github.com/henit/react-entity-data#readme",
   "dependencies": {
+    "ajv": "^6.10.0",
     "bem-cn": "^3.0.1",
     "core-js": "^3.0.0",
-    "entity-state": "0.1.5",
+    "entity-state": "^0.1.7",
     "lodash": "^4.17.11",
     "prop-types": "^15.7.2",
     "react": "^16.8.5",

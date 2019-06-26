@@ -8,6 +8,42 @@ import { EntityState } from 'entity-state';
  */
 let ReduxReducers = {};
 
+ReduxReducers.serialHandlers = handlers => (state, action) =>
+  Array.isArray(handlers) ?
+    handlers.reduce((state, handler) => handler(state, action), state)
+    :
+    handlers(state, action);
+
+ReduxReducers.serial = (state, action, handlers) =>
+  Array.isArray(handlers) ?
+    handlers.reduce((state, handler) => handler(state, action), state)
+    :
+    handlers(state, action);
+
+/**
+ * Combine reducers for different entity data handling purposes to one reducer for
+ * the whole data set
+ * @param {mixed} initialState Initial state
+ * @param {object} handlers Handlers with key being action types, and value being a single reducer or array of reducers
+ * @return {function} Reducer for multiple handlers
+ */
+ReduxReducers.createReducer = (initialState, handlers) =>
+  function reducer(state = initialState, action) {
+    if (handlers.hasOwnProperty(action.type)) {
+      return ReduxReducers.serialHandlers(handlers[action.type]);
+      /*
+      // Array of handlers for one action type
+      return Array.isArray(handlers[action.type]) ?
+        handlers[action.type].reduce((state, handler) => handler(state, action), state)
+        :
+        // Single handler for given action type
+        handlers[action.type](state, action);
+      */
+    } else {
+      // No handler for given action type
+      return state;
+    }
+  };
 
 ReduxReducers.getEntityState = (state, statePath = undefined) => {
   return (statePath ? _get(statePath, state) : state) || {};
@@ -16,6 +52,28 @@ ReduxReducers.getEntityState = (state, statePath = undefined) => {
 ReduxReducers.setEntityState = (entityState, state, statePath = undefined) => {
   return statePath ? _set(statePath, entityState, state) : entityState;
 };
+
+/**
+ * Generator function to make a reducer that provide the given reduce state from a sub path of
+ * the original state as if it was the base state for the reducer
+ * @param {string} path Sub path of outer state
+ * @param {function} reducer Reducer that should receive the inner state content
+ * @return {function} New reducer that take the outer state
+ */
+ReduxReducers.reducePath = (path, reducer) => (state, action) =>
+  _set(path, reducer(_get(path, state), action), state);
+
+// ReduxReducers.reducePath = (path, reducer) => {
+//   return (state, action) => {
+//     const innerState = _get(path, state);
+//     const newState = reducer(innerState, action);
+//     return _set(path, newState, state);
+//   };
+// };
+
+
+
+// return ReduxReducers.atPath('list', ReduxReducers.pathClean)(state, action);
 
 /**
  * Initialize entity state
@@ -89,7 +147,7 @@ ReduxReducers.pathError = (state, action, statePath = undefined) =>
  * @return {object} New state
  */
 ReduxReducers.clear = (state, action, statePath = undefined) =>
-  EntityState.clear(state, statePath);
+  EntityState.clear(state, statePath) || null;
 
 /**
  * Clean the entity state
@@ -114,7 +172,7 @@ ReduxReducers.httpRequest = (state, action, statePath = undefined) => {
 
   if (action.clear) {
     // return EntityState.clear();
-    return ReduxReducers.setEntityState(undefined, state, statePath);
+    return ReduxReducers.setEntityState(null, state, statePath);
   }
 
   const entityState = Object.assign(
@@ -151,6 +209,58 @@ ReduxReducers.httpRequest = (state, action, statePath = undefined) => {
 
   return ReduxReducers.setEntityState(entityState, state, statePath);
 };
+
+ReduxReducers.validate = (state, action, statePath) => {
+  const withError = action.error ?
+    EntityState.error(action.error, state, statePath)
+    :
+    state;
+
+  if (!action.pathError) {
+    return withError;
+  }
+
+  const ret = Object
+    .keys(action.pathError)
+    .reduce(
+      (state, path) =>
+        EntityState.pathError(path, action.pathError[path], state, statePath)
+      , withError
+    );
+
+  return ret;
+};
+
+/**
+ * Toggle mode value of entity state
+ * @param {object} state Application state
+ * @param {object} action Action
+ * @return {object} New state
+ */
+ReduxReducers.toggleMode = (state, action) => {
+  if (action.path) {
+    // Path based mode values
+    const existing = state.pathMode || {};
+    const pathMode = {
+      ...existing,
+      [action.path]: existing[action.path] === action.value ? undefined : action.value
+    };
+    return _set('pathMode', pathMode, state);
+  } else {
+    // Whole state mode
+    const mode = state.mode === action.value ? undefined : action.value;
+    return _set('mode', mode, state);
+  }
+};
+
+/**
+ * Clean paths of a given prefix of the entity state
+ * @param {object} state Application state
+ * @param {object} action Action
+ * @return {object} New state
+ */
+ReduxReducers.pathClean = (state, action) =>
+  EntityState.cleanPath(action.path || '', state);
 
 /**
  * Generate a set of reducers for the given type constants, to a given path in the state
