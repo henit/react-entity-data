@@ -8,13 +8,13 @@ import { EntityState } from 'entity-state';
  */
 let ReduxReducers = {};
 
-ReduxReducers.serialHandlers = handlers => (state, action) =>
-  Array.isArray(handlers) ?
-    handlers.reduce((state, handler) => handler(state, action), state)
-    :
-    handlers(state, action);
+// ReduxReducers.serial = (state, action, handlers) =>
+//   Array.isArray(handlers) ?
+//     handlers.reduce((state, handler) => handler(state, action), state)
+//     :
+//     handlers(state, action);
 
-ReduxReducers.serial = (state, action, handlers) =>
+ReduxReducers.serial = (handlers) => (state, action) =>
   Array.isArray(handlers) ?
     handlers.reduce((state, handler) => handler(state, action), state)
     :
@@ -30,15 +30,7 @@ ReduxReducers.serial = (state, action, handlers) =>
 ReduxReducers.createReducer = (initialState, handlers) =>
   function reducer(state = initialState, action) {
     if (handlers.hasOwnProperty(action.type)) {
-      return ReduxReducers.serialHandlers(handlers[action.type]);
-      /*
-      // Array of handlers for one action type
-      return Array.isArray(handlers[action.type]) ?
-        handlers[action.type].reduce((state, handler) => handler(state, action), state)
-        :
-        // Single handler for given action type
-        handlers[action.type](state, action);
-      */
+      return ReduxReducers.serial(handlers[action.type])(state, action);
     } else {
       // No handler for given action type
       return state;
@@ -62,18 +54,6 @@ ReduxReducers.setEntityState = (entityState, state, statePath = undefined) => {
  */
 ReduxReducers.reducePath = (path, reducer) => (state, action) =>
   _set(path, reducer(_get(path, state), action), state);
-
-// ReduxReducers.reducePath = (path, reducer) => {
-//   return (state, action) => {
-//     const innerState = _get(path, state);
-//     const newState = reducer(innerState, action);
-//     return _set(path, newState, state);
-//   };
-// };
-
-
-
-// return ReduxReducers.atPath('list', ReduxReducers.pathClean)(state, action);
 
 /**
  * Initialize entity state
