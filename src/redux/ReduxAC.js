@@ -71,7 +71,7 @@ ReduxAC.clean = type => () => ({ type });
  * @param {function} requestFn Async function making the actual http request
  * @param {object} [options] Options
  * @param {string} [option.loading] True to flag the state as loading during request
- * @param {string} [option.updating] True ito flat the state as updating during request
+ * @param {string} [option.updating] True to flag the state as updating during request
  * @param {string} [option.path] Path to what part of the dataset the request is for. Undefined for
                                  the whole set
  * @param {bool} [options.loadResponse] Load response data when request is complete

@@ -440,7 +440,7 @@ storiesOf('EntityData', module)
       </div>
     );
   }))
-  .add('With data only', withReduxStore(entityReducer, (state, dispatch) =>
+  .add('With data only', withReduxStore(entityStore, (state, dispatch) =>
     <div>
       <h1>EntityData</h1>
 
