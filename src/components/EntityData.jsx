@@ -3,9 +3,13 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { EntityState } from 'entity-state';
 
-export const EntityDataContext = React.createContext({
-  error: {}
-});
+export const EntityDataContext = React.createContext();
+
+const getFrom = (path, source) =>
+  Array.isArray(path) ?
+    path.reduce((ret, path) => ({ ...ret, [path]: _get(path, source) }), {})
+    :
+    _get(path, source);
 
 /**
  * Connect a component with EntityData
@@ -22,7 +26,11 @@ export function withEntityData(Component) {
     static contextType = EntityDataContext;
 
     static propTypes = {
-      path: PropTypes.string,
+      // path: PropTypes.string,
+      path: PropTypes.oneOfType([
+        PropTypes.string, // Single value
+        PropTypes.array // Multi-value object (leads to value { [pat1]: value, [path2]: value, ... })
+      ]),
       value: PropTypes.any,
       data: PropTypes.oneOfType([
         PropTypes.object,
@@ -46,10 +54,21 @@ export function withEntityData(Component) {
     };
 
     render() {
+      if (!this.context) {
+        // Not inside any EntityData context. Render with what props is relevant.
+        return (
+          <Component { ...this.props } />
+        );
+      }
+
       const { path } = this.props;
       const { loadedAt, loading, updating, pathChange, pathInitial, pathLoading, error, pathError } = this.context;
       const data = this.props.data || this.context.data;
-      const value = this.props.value || (data && path) ? _get(path, data) : undefined;
+      // const value = this.props.value || (data && path) ? _get(path, data) : data;
+      const value = this.props.value || (data && path) ? getFrom(path, data) : undefined;
+
+
+
 
       // TODO check re-renders
 
@@ -58,7 +77,7 @@ export function withEntityData(Component) {
           { ...this.props }
           value={ value }
           // Path specific error when given, else give the error for the whole data set
-          error={ path ? pathError[path] : error }
+          error={ (path && pathError) ? pathError[path] : error }
           onChange={ this.handleChange }
           onError={ this.handleError }
           loadedAt={ loadedAt }
