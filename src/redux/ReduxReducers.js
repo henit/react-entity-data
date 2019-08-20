@@ -163,8 +163,8 @@ ReduxReducers.httpRequest = (state, action, statePath = undefined) => {
 
     // Loading / updating state
     action.path ? {
-      pathLoading: _set(action.path, action.loading ? true : undefined),
-      pathUpdating: _set(action.path, action.updating ? true : undefined)
+      pathLoading: _set(action.path, action.loading ? true : undefined, existingEntityState.pathLoading || {}),
+      pathUpdating: _set(action.path, action.updating ? true : undefined, existingEntityState.pathUpdating || {})
     } : {
       loading: _defaultTo(false, action.loading),
       updating: _defaultTo(false, action.updating)
