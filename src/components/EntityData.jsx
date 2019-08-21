@@ -68,8 +68,6 @@ export function withEntityData(Component) {
       const value = this.props.value || (data && path) ? getFrom(path, data) : undefined;
 
 
-
-
       // TODO check re-renders
 
       return (
@@ -193,7 +191,8 @@ export default class EntityData extends React.PureComponent {
 
   handleChange = (path, value, data) => {
     // Direct onChange on this instance. Use the inner path regardless of outer EntityData components
-    this.props.onChange && this.props.onChange(path, value, data);
+    const localPath = [this.props.path, path].filter(Boolean).join('.');
+    this.props.onChange && this.props.onChange(localPath, value, data);
 
     if (this.props.state || this.props.data) {
       // When this instance has state/data via direct props, consider it a "base" instance for

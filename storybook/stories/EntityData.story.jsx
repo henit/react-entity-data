@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import _ from 'lodash/fp';
 import React from 'react';
 import PropTypes from 'prop-types';
 import { createStore } from 'redux';
@@ -188,32 +189,35 @@ function prepareState(state) {
     ...state,
     loading: select('loading', { True: true, False: false, Null: null }, null),
     updating: select('updating', { True: true, False: false, Null: null }, null),
-    pathLoading: {
+    pathLoading: _.omitBy(_.isNil, {
       0: select('pathLoading.0', { True: true, False: false, Null: null }, null),
       1: select('pathLoading.1', { True: true, False: false, Null: null }, null),
       2: select('pathLoading.2', { True: true, False: false, Null: null }, null)
-    },
-    pathUpdating: {
+    }),
+    pathUpdating: _.omitBy(_.isNil, {
       0: select('pathUpdating.0', { True: true, False: false, Null: null }, null),
       1: select('pathUpdating.1', { True: true, False: false, Null: null }, null),
       2: select('pathUpdating.2', { True: true, False: false, Null: null }, null)
-    },
-    pathChange: {
-      '0.name': boolean('pathChange.0.name: "Nr. one"', false) ? 'Nr. one' : undefined,
-      '1.name': boolean('pathChange.1.name: "Nr. two"', false) ? 'Nr. two' : undefined,
-      '2.name': boolean('pathChange.2.name: "Nr. three"', false) ? 'Nr. three' : undefined
-    },
-    pathInitial: {
-      '0.name': boolean('pathInitial.0.name: "Entity one"', false) ? 'Entity one' : undefined,
-      '1.name': boolean('pathInitial.1.name: "Entity two"', false) ? 'Entity two' : undefined,
-      '2.name': boolean('pathInitial.2.name: "Entity three"', false) ? 'Entity three' : undefined
-    },
+    }),
+    pathChange: _.omitBy(_.isUndefined, {
+      ...state.pathChange,
+      '0.name': boolean('pathChange.0.name: "Nr. one"', false) ? 'Nr. one' : state.pathChange['0.name'],
+      '1.name': boolean('pathChange.1.name: "Nr. two"', false) ? 'Nr. two' : state.pathChange['1.name'],
+      '2.name': boolean('pathChange.2.name: "Nr. three"', false) ? 'Nr. three' : state.pathChange['2.name']
+    }),
+    pathInitial: _.omitBy(_.isUndefined, {
+      ...state.pathInitial,
+      '0.name': boolean('pathInitial.0.name: "Entity one"', false) ? 'Entity one' : state.pathInitial['0.name'],
+      '1.name': boolean('pathInitial.1.name: "Entity two"', false) ? 'Entity two' : state.pathInitial['1.name'],
+      '2.name': boolean('pathInitial.2.name: "Entity three"', false) ? 'Entity three' : state.pathInitial['2.name']
+    }),
     error: boolean('error: Whats wrong?', false) ? { message: 'Whats wrong?' } : undefined,
-    pathError: {
-      0: boolean('pathError.0: { message: "Entity one has error" }', false) ? { message: 'Entity one has error' } : undefined,
-      1: boolean('pathError.1: { message: "Entity two has error" }', false) ? { message: 'Entity two has error' } : undefined,
-      2: boolean('pathError.2: { message: "Entity three has error" }', false) ? { message: 'Entity three has error' } : undefined
-    }
+    pathError: _.omitBy(_.isUndefined, {
+      ...state.pathError,
+      0: boolean('pathError.0: { message: "Entity one has error" }', false) ? { message: 'Entity one has error' } : state.pathError[0],
+      1: boolean('pathError.1: { message: "Entity two has error" }', false) ? { message: 'Entity two has error' } : state.pathError[1],
+      2: boolean('pathError.2: { message: "Entity three has error" }', false) ? { message: 'Entity three has error' } : state.pathError[2]
+    })
   };
   /* eslint-enable max-len */
 }
@@ -282,6 +286,33 @@ storiesOf('EntityData', module)
         <a onClick={ () => dispatch(entityActions.error(new Error('An error concerning the whole data set.'))) }>
           Error
         </a>
+      </div>
+    );
+  }))
+  .add('Path into data set', withReduxStore(listStore, (state, dispatch) => {
+
+    return (
+      <div>
+        <h1>EntityData</h1>
+
+        <h2>Nested entities</h2>
+
+        <h3>
+          ... with full state (onChange handlers
+          { getOnChangeAction() === 'stage' ? ' staging the changes' : ' setting the changes' })
+        </h3>
+
+        <EntityData
+          state={ prepareState(state) }
+          path="1"
+          onChange={ listOnChange }
+          onError={ listOnError }
+        >
+          <EntityStringField label="Name" path="name" />
+          <EntityStringField label="Number" path="number" />
+        </EntityData>
+
+        <DebugReduxState state={ prepareState(state) } />
       </div>
     );
   }))
