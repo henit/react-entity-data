@@ -280,7 +280,10 @@ ReduxReducers.generateAt = (statePath, types, initialState = EntityState.initial
       case types.clean:
         return ReduxReducers.clean(state, action, statePath);
 
-      default:
+      case types.httpRequest:
+        return ReduxReducers.httpRequest(state, action, statePath);
+
+    default:
         return state;
     }
   };
