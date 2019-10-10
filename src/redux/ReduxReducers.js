@@ -29,7 +29,8 @@ ReduxReducers.serial = (handlers) => (state, action) =>
  */
 ReduxReducers.createReducer = (initialState, handlers) =>
   function reducer(state = initialState, action) {
-    if (handlers.hasOwnProperty(action.type)) {
+    // if (handlers.hasOwnProperty(action.type)) {
+    if (handlers[action.type]) {
       return ReduxReducers.serial(handlers[action.type])(state, action);
     } else {
       // No handler for given action type

@@ -47,8 +47,8 @@ storiesOf('Inputs', module)
 
           <StringInput
             placeholder="Enter a text"
-            value={ state.standardWithValue }
-            onChange={ onChange('standardWithValue') } />
+            value={ state.standardValue }
+            onChange={ onChange('standardValue') } />
 
           <h2>Multiline</h2>
 

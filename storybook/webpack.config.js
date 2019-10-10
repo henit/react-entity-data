@@ -30,7 +30,7 @@ module.exports = {
   },
   resolve: {
     alias: {
-      'entity-state': path.resolve('../entity-state')
+      // 'entity-state': path.resolve('../entity-state')
     }
   }
 };
