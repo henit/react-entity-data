@@ -56,7 +56,7 @@
     "eslint-plugin-react": "^7.16.0",
     "file-loader": "^4.2.0",
     "jest": "^24.9.0",
-    "node-sass": "^4.12.0",
+    "node-sass": "^7.0.0",
     "react-redux": "^7.1.1",
     "redux": "^4.0.4",
     "regenerator-runtime": "^0.13.3",
